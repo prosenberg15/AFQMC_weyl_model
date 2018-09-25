@@ -1,0 +1,29 @@
+Try to write the afqmc use metropolis method. 20140412
+check before run: 
+1. Do we need to write the aux and phi after phinish the run?
+2. Random number seed?
+
+1. Add pairing correlation.
+2. How to add the Jastrow?
+
+0.0 to 0.1: The inverse propogation part is not well defined, remember the wf on the path.
+0.1 to 0.2: Find the bug: an and ao do not divided by Ntot, also fix the complex problem(spin and charge).
+0.2 to 0.3: FInd the bug: the ao and an compare need to consider the effect after population control.
+            Fix a bug: complex when apply to the left wave function.
+0.3 to 0.4: remember the imp_save in the code.
+0.4 to 0.5: change Naccept and Nupdat to 64 bit, add number of particles
+0.5 to 0.6: change the error bar estimator method, now we must use mpi to get the error bar.
+0.6 to 0.7: change the read wf and x field, change the write wf and x field, change the I-GS in update.
+0.7 to 0.8: add the measurement: measure energy at any where during the projection.
+0.8 to 0.9: add the observable measurement during the middle.
+0.9 to 1.0: add pairing correlation function
+            Now in the observable measurement, only use fftw, and get the diagnoal for kinetic energy. So we must set fftw to 1 and measure diagnal term in the param. Version 0.9 will be fine. Measure in energy will also be fine.
+1.0 to 1.1: Use k^2 dispersion and ky-i*kx for non-interaction Hamiltionian.
+1.1 to 1.2: add spin spin correlation function
+1.2 to 1.3: add fourier transformation for the spin and pair function
+1.3 to 1.4: add <ni*nj> and corresponding structure factor
+1.4 to 1.5: add the momentum distribution nk=nkup+nkdn
+1.5 to 1.6: fix a bug about Nup and Ndn: in meas_energy we use the nature orbital before, in meas_observ calculate the right Nup and Ndn.
+1.6 to 1.7: calculate S^x_k, S^y_k, also measure the energy in the true k space instead of nature orbital.
+1.7 to 1.8: fix the bug about nature orbital nk+ and nk-, calculate the sk^+ at first.
+1.8 to 1.8-pairing: add the pairing wave function.

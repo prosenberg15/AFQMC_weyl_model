@@ -1,0 +1,45 @@
+#FC = ifort  
+FC = mpif90 -DMPI
+PROG = afqmc
+LIBS= -L/usr/local/acml-5.1.0/gfortran64/lib -L/usr/local/acml-5.3.1/gfortran64/lib -lacml -lgfortran -L/sciclone/home20/per/libraries/sprng/sprng2.0/lib -lsprng -lgmp\
+-L/usr/local/amd64/magny-cours/gcc/fftw-3.3.3/lib  -lfftw3 -L/usr/local/amd64/magny-cours/gcc/mvapich2-1.9-ib/lib -lmpich -lmpichf90
+
+#-L/share/apps/intel/lib/intel64 -limf\
+     -L/share/apps/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lguide -lpthread -lm\
+     
+FFLAGS=-cpp -ffree-line-length-0 -DPOINTER_SIZE=8 -I/sciclone/home20/per/libraries/sprng/sprng2.0/include -I/usr/local/amd64/magny-cours/gcc/fftw-3.3.3/include
+#-fpp \
+ 
+OBJ = timing_module.o sprng_rndm.o io_module.o matrixcal.o caldet.o matrix_cpmc.o sort2.o\
+      params.o mpi_inform.o lattice_inform.o matrix_fftw.o initial_end.o file_name.o initial_kv.o\
+      initial_qmc.o matrix_dc.o modified_GS.o update.o measure.o data_manipulate.o main.o
+
+
+all: $(PROG)
+
+rmdat:
+	rm -f *.dat
+
+clobber:
+	rm -f *.o  *.mod *.out *.dat
+
+clean:clobber
+	rm -f afqmc
+
+$(PROG): $(OBJ)
+	$(FC) $(FFLAGS) -o $(PROG) $(OBJ) $(LIBS)
+
+.SUFFIXES: .o .for .f90
+.f90.o : 
+	$(FC) $(FFLAGS) -c  $<
+
+.for.o : 
+	$(FC) $(FFLAGS) -c  $<
+
+.f.o : 
+	$(FC) $(FFLAGS) -c  $<
+
+
+.c.o : 
+	$(CC) -O2  -c  $<
+

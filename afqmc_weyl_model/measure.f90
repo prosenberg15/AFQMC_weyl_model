@@ -311,7 +311,7 @@ if((openbcx.eq.0).and.(openbcy.eq.0)) then
             call kahan_sum_c(didj_local,didj_c(n),didj_one(n))  
          end do
       end do
-   else if((dtype.EQ.'d').or.(dtype.EQ.'w')) then
+   else if(dtype.EQ.'d') then
       do i=1,Nsite,1
          do j=1,Nsite,1
             didj_local=Amat_local(i,j)*Amat_local(i+Nsite,j+Nsite)
@@ -323,6 +323,32 @@ if((openbcx.eq.0).and.(openbcy.eq.0)) then
             end do
             n=latt_label(cc(1:Dimen))
             call kahan_sum_c(didj_local,didj_c(n),didj_one(n))
+         end do
+      end do
+   else if(dtype.EQ.'w') then
+      do i=1,Nsite,1
+         do j=1,Nsite,1
+            didj_local=Amat_local(i,j)*Amat_local(i+Nsite,j+Nsite)
+            do m=1,Dimen,1
+               !We calculate didj==>d1d(j-i+1)
+               !so we need to focus on j-i+1
+               ctmp=coor(j,m)-coor(i,m)+1
+               cc(m)=bound(ctmp,Nl(m))
+            end do
+            n=latt_label(cc(1:Dimen))
+            !d^{dagger,A}_i d^A_j
+            if((i.le.Nbravais).and.(j.le.Nbravais)) then
+               call kahan_sum_c(didj_local,didj_c(n),didj_one(n))
+            !d^{dagger,A}_i d^B_j
+            else if((i.le.Nbravais).and.(j.gt.Nbravais)) then
+               call kahan_sum_c(didj_local,didj_c(n+Nbravais),didj_one(n+Nbravais))
+            !d^{dagger,B}_i d^A_j
+            else if((i.gt.Nbravais).and.(j.le.Nbravais)) then
+               call kahan_sum_c(didj_local,didj_c(n+2*Nbravais),didj_one(n+2*Nbravais))
+            !d^{dagger,B}_i d^B_j
+            else if((i.gt.Nbravais).and.(j.gt.Nbravais)) then
+               call kahan_sum_c(didj_local,didj_c(n+3*Nbravais),didj_one(n+3*Nbravais))
+            endif
          end do
       end do
    end if
@@ -654,7 +680,7 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
             call kahan_sum_c(ninj_local,ninj_c(n+Nsite),ninj_one(n+Nsite))
          end do
       end do
-   else if((dtype.EQ.'d').or.(dtype.EQ.'w')) then
+   else if(dtype.EQ.'d') then
       do i=1,Nsite,1
          do j=1,Nsite,1
 
@@ -677,6 +703,73 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
             !Niu Njd
             ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
             call kahan_sum_c(ninj_local,ninj_c(n+Nsite),ninj_one(n+Nsite))
+         end do
+      end do
+   else if(dtype.EQ.'w') then
+      do i=1,Nsite,1
+         do j=1,Nsite,1
+
+            do m=1,Dimen,1
+               !We calculate didj==>d1d(j-i+1)
+               !so we need to focus on j-i+1
+               ctmp=coor(j,m)-coor(i,m)+1
+               cc(m)=bound(ctmp,Nl(m))
+            end do
+            n=latt_label(cc(1:Dimen))
+
+            !AA
+            if((i.le.Nbravais).and.(j.le.Nbravais)) then
+               !Niu Nju
+               if(i.eq.j) then
+                  ninj_local=Amat_local(i,i)
+               else
+                  ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+               end if
+               call kahan_sum_c(ninj_local,ninj_c(n),ninj_one(n))
+
+               !Niu Njd
+               ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+               call kahan_sum_c(ninj_local,ninj_c(n+2*Nsite),ninj_one(n+2*Nsite))
+            !AB   
+            else if((i.le.Nbravais).and.(j.gt.Nbravais)) then
+               !Niu Nju
+               if(i.eq.j) then
+                  ninj_local=Amat_local(i,i)
+               else
+                  ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+               end if
+               call kahan_sum_c(ninj_local,ninj_c(n+Nbravais),ninj_one(n+Nbravais))
+
+               !Niu Njd
+               ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+               call kahan_sum_c(ninj_local,ninj_c(n+Nbravais+2*Nsite),ninj_one(n+Nbravais+2*Nsite))
+            !BA
+            else if((i.gt.Nbravais).and.(j.le.Nbravais)) then
+               !Niu Nju
+               if(i.eq.j) then
+                  ninj_local=Amat_local(i,i)
+               else
+                  ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+               end if
+               call kahan_sum_c(ninj_local,ninj_c(n+2*Nbravais),ninj_one(n+2*Nbravais))
+
+               !Niu Njd
+               ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+               call kahan_sum_c(ninj_local,ninj_c(n+2*Nbravais+2*Nsite),ninj_one(n+2*Nbravais+2*Nsite))
+            !BB
+            else if((i.gt.Nbravais).and.(j.gt.Nbravais)) then
+               !Niu Nju
+               if(i.eq.j) then
+                  ninj_local=Amat_local(i,i)
+               else
+                  ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+               end if
+               call kahan_sum_c(ninj_local,ninj_c(n+3*Nbravais),ninj_one(n+3*Nbravais))
+
+               !Niu Njd
+               ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+               call kahan_sum_c(ninj_local,ninj_c(n+3*Nbravais+2*Nsite),ninj_one(n+3*Nbravais+2*Nsite))
+            end if
          end do
       end do
    end if
@@ -925,14 +1018,24 @@ end subroutine add_pair_one_body
 subroutine allocate_one_meas()
 use all_param
 implicit none
-allocate(didj_one(Nsite))
-allocate(didj_c(Nsite))
+if(dtype.ne.'w') then
+   allocate(didj_one(Nsite))
+   allocate(didj_c(Nsite))
+else if(dtype.eq.'w') then
+   allocate(didj_one(DNsite))
+   allocate(didj_c(DNsite))
+endif
 allocate(dk_one(Nsite))
 allocate(sisj_one(Nsite))
 allocate(sisj_c(Nsite))
 allocate(sk_one(Nsite))
-allocate(ninj_one(DNsite))
-allocate(ninj_c(DNsite))
+if(dtype.ne.'w') then
+   allocate(ninj_one(DNsite))
+   allocate(ninj_c(DNsite))
+else if(dtype.eq.'w') then
+   allocate(ninj_one(2*DNsite))
+   allocate(ninj_c(2*DNsite))
+end if
 allocate(edgecup_one(Nsite,Nsite))
 allocate(edgecup_c(Nsite,Nsite))
 allocate(edgecdn_one(Nsite,Nsite))

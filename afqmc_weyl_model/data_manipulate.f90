@@ -4,7 +4,7 @@ implicit none
 #ifdef MPI
 include "mpif.h"
 #endif
-integer(kind=8)::num_tmp
+integer(kind=8)::num_tmp,Ns
 complex(kind=8)::temp_array(Nsize)
 real(kind=8)::rtemp_array(Nsize)
 complex(kind=8)::mean_c,mean_cup,mean_cdn
@@ -134,10 +134,19 @@ end do
  end if
 
     !write pairing correlation didj
-    if(rank.eq.0) call openUnit(didjName,16,'R')
-    do i=1,Nsite,1
+ if(rank.eq.0) call openUnit(didjName,16,'R')
+ if(dtype.ne.'w') then
+    Ns=Nsite
+ else if(dtype.eq.'w') then
+    Ns=DNsite
+ end if
+    do i=1,Ns,1
        if((openbcx.eq.0).and.(openbcy.eq.0)) then
-          didj_one(i)=didj_one(i)/dble(i_observ*Nsite)
+          if(dtype.ne.'w') then
+             didj_one(i)=didj_one(i)/dble(i_observ*Nsite)
+          else if (dtype.eq.'w') then
+             didj_one(i)=didj_one(i)/dble(i_observ*Nbravais)
+          end if
        else if((openbcx.eq.1).or.(openbcy.eq.1)) then
           didj_one(i)=didj_one(i)/dble(i_observ)
        end if
@@ -244,9 +253,18 @@ end do
 
  !write charge charge correlation
     if(rank.eq.0) call openUnit(ninjName,16,'R')
-    do i=1,DNsite,1
+    if(dtype.ne.'w') then
+       Ns=DNsite
+    else if(dtype.eq.'w') then
+       Ns=2*DNsite
+    end if
+    do i=1,Ns,1
        if((openbcx.eq.0).and.(openbcy.eq.0)) then
-          ninj_one(i)=ninj_one(i)/dble(i_observ*Nsite)
+          if(dtype.ne.'w') then
+             ninj_one(i)=ninj_one(i)/dble(i_observ*Nsite)
+          else if(dtype.eq.'w') then
+             ninj_one(i)=ninj_one(i)/dble(i_observ*Nbravais)
+          end if
        else if((openbcx.eq.1).or.(openbcy.eq.1)) then
           ninj_one(i)=ninj_one(i)/dble(i_observ)
        end if
