@@ -1,0 +1,181 @@
+ Start to run the routine.
+ date=20180925
+ time=          18 :          49 :           4
+ --------------------------------------------------------
+  
+  
+  
+ genf_types:           1
+ seed:   985456376
+         100          50        5000
+ suggestion: blk*blk=Nlen will save the memory!
+ Nbravias:            4
+ Nsites:            8
+           1  -1.6999999999999971     
+           2  -1.2206555615733683     
+           3  -1.2206555615733683     
+           4 -0.29999999999999721     
+           5  0.30000000000000054     
+           6   1.2206555615733685     
+           7   1.2206555615733685     
+           8   1.6999999999999977     
+ Start therm:
+           1
+           2
+           3
+           4
+           5
+           6
+           7
+           8
+           9
+          10
+          11
+          12
+          13
+          14
+          15
+          16
+          17
+          18
+          19
+          20
+ Therm done!
+ Start measure:
+           1
+           2
+           3
+           4
+           5
+           6
+           7
+           8
+           9
+          10
+          11
+          12
+          13
+          14
+          15
+          16
+          17
+          18
+          19
+          20
+          21
+          22
+          23
+          24
+          25
+          26
+          27
+          28
+          29
+          30
+          31
+          32
+          33
+          34
+          35
+          36
+          37
+          38
+          39
+          40
+          41
+          42
+          43
+          44
+          45
+          46
+          47
+          48
+          49
+          50
+          51
+          52
+          53
+          54
+          55
+          56
+          57
+          58
+          59
+          60
+          61
+          62
+          63
+          64
+          65
+          66
+          67
+          68
+          69
+          70
+          71
+          72
+          73
+          74
+          75
+          76
+          77
+          78
+          79
+          80
+          81
+          82
+          83
+          84
+          85
+          86
+          87
+          88
+          89
+          90
+          91
+          92
+          93
+          94
+          95
+          96
+          97
+          98
+          99
+         100
+ Total update number is:              9600000
+ Total accept number is:              9254931
+ The accept ratio is:  0.96405531249999998     
+ Measure for energy in each thread:                40000
+ Measure for observable in each thread:                23800
+ The energy is:  -5.2740351517487412        9.6646254312336959E-003
+ The kinetic energy is:  -2.2324990425415527        5.4217897274990217E-003
+ The potential energy is:  -3.0487344686339708        7.7399201976284413E-003
+ Nup is:   1.0000000000000000        0.0000000000000000     
+ Ndn is:   1.0000000000000000        0.0000000000000000     
+ singlet condensate: ( 0.50432353133334507     , -4.3552896105561792E-004)   3.5924747354694211E-003
+ singlet condensate: (  2.7100147170895654E-019, -1.1134399152910484E-019)   3.1814382251416241E-019
+ ZHEEV error ,info=          23
+--------------------------------------------------------------------------
+mpirun has exited due to process rank 0 with PID 18741 on
+node prosenberg-7050 exiting improperly. There are three reasons this could occur:
+
+1. this process did not call "init" before exiting, but others in
+the job did. This can cause a job to hang indefinitely while it waits
+for all processes to call "init". By rule, if one process calls "init",
+then ALL processes must call "init" prior to termination.
+
+2. this process called "init", but exited without calling "finalize".
+By rule, all processes that call "init" MUST call "finalize" prior to
+exiting or it will be considered an "abnormal termination"
+
+3. this process called "MPI_Abort" or "orte_abort" and the mca parameter
+orte_create_session_dirs is set to false. In this case, the run-time cannot
+detect that the abort call was an abnormal termination. Hence, the only
+error message you will receive is this one.
+
+This may have caused other processes in the application to be
+terminated by signals sent by mpirun (as reported here).
+
+You can avoid this message by specifying -quiet on the mpirun command line.
+
+--------------------------------------------------------------------------

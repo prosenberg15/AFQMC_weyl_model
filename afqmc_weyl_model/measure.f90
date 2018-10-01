@@ -271,6 +271,10 @@ end if
     call add_ninj(Amat_local)
  endif
 
+ if(dtype.eq.'w') then
+    call add_bond_l(Amat_local)
+ endif
+ 
  if((openbcx.eq.0).and.(openbcy.eq.0)) then
     !momentum distribution
     call add_ck(Amat_local_k)
@@ -291,9 +295,10 @@ implicit none
 complex(kind=8),intent(IN)::Amat_local(DNsite,DNsite)
 complex(kind=8)::didj_local
 integer,external::latt_label
+integer,external::latt_label_true_site
 integer,external::bound
 integer::cc(1:Dimen),ctmp
-integer::i,j,n,m
+integer::i,j,sitei,sitej,n,m
 
 if((openbcx.eq.0).and.(openbcy.eq.0)) then
    if(dtype.EQ.'c') then
@@ -328,7 +333,27 @@ if((openbcx.eq.0).and.(openbcy.eq.0)) then
    else if(dtype.EQ.'w') then
       do i=1,Nsite,1
          do j=1,Nsite,1
+            
             didj_local=Amat_local(i,j)*Amat_local(i+Nsite,j+Nsite)
+
+            !in terms of sites
+            sitej=sublattice_site_to_true_site(j)
+            sitei=sublattice_site_to_true_site(i)
+            do m=1,Dimen,1
+               !We calculate didj==>d1d(j-i+1)
+               !so we need to focus on j-i+1
+               ctmp=coor_true_site(sitej,m)-coor_true_site(sitei,m)+1
+               if(m.eq.1) then
+                  cc(m)=bound(ctmp,2*Nl(m))
+               else if(m.eq.2) then
+                  cc(m)=bound(ctmp,Nl(m))
+               end if
+            end do
+            n=latt_label_true_site(cc(1:Dimen))
+
+            call kahan_sum_c(didj_local,didj_true_site_c(n),didj_true_site_one(n))
+            
+            !in terms of sublattices
             do m=1,Dimen,1
                !We calculate didj==>d1d(j-i+1)
                !so we need to focus on j-i+1
@@ -467,6 +492,42 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
       end do
       
    else if(dtype.EQ.'d') then
+      do i=1,Nsite,1
+         do j=1,Nsite,1
+            sisj_local=zero
+            !term 1
+            if(i.eq.j) sisj_local=sisj_local+Amat_local(i,i)
+            sisj_local=sisj_local+Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+            !term 2
+            if(i.eq.j) sisj_local=sisj_local+Amat_local(i+Nsite,i+Nsite)
+            sisj_local=sisj_local+Amat_local(i+Nsite,i+Nsite)*Amat_local(j+Nsite,j+Nsite)-&
+                 &Amat_local(i+Nsite,j+Nsite)*Amat_local(j+Nsite,i+Nsite)
+            !term 3
+            sisj_local=sisj_local-Amat_local(i+Nsite,i+Nsite)*Amat_local(j,j)
+            
+            !term 4
+            sisj_local=sisj_local-Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+            
+            !term 5
+            if(i.eq.j) sisj_local=sisj_local+2.d0*Amat_local(i,i)
+            sisj_local=sisj_local-2.d0*Amat_local(i,j)*Amat_local(j+Nsite,i+Nsite)
+            
+            !term 6
+            if(i.eq.j) sisj_local=sisj_local+2.d0*Amat_local(i+Nsite,i+Nsite)
+            sisj_local=sisj_local-2.d0*Amat_local(i+Nsite,j+Nsite)*Amat_local(j,i)
+            sisj_local=sisj_local/4.d0
+            do m=1,Dimen,1
+               !We calculate sisj==>s1s(j-i+1)
+               !so we need to focus on j-i+1
+               ctmp=coor(j,m)-coor(i,m)+1
+               cc(m)=bound(ctmp,Nl(m))
+            end do
+            n=latt_label(cc(1:Dimen))
+            call kahan_sum_c(sisj_local,sisj_c(n),sisj_one(n))
+         end do
+      end do
+      
+   else if(dtype.EQ.'w') then
       do i=1,Nsite,1
          do j=1,Nsite,1
             sisj_local=zero
@@ -650,9 +711,10 @@ implicit none
 complex(kind=8),intent(IN)::Amat_local(DNsite,DNsite)
 complex(kind=8)::ninj_local
 integer,external::latt_label
+integer,external::latt_label_true_site
 integer,external::bound
 integer::cc(1:Dimen),ctmp
-integer::i,j,n,m
+integer::i,j,sitei,sitej,n,m
 
 if ((openbcx.eq.0).and.(openbcy.eq.0)) then
    if(dtype.EQ.'c') then
@@ -691,11 +753,12 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
                cc(m)=bound(ctmp,Nl(m))
             end do
             n=latt_label(cc(1:Dimen))
-
+            
             !Niu Nju
             if(i.eq.j) then
                ninj_local=Amat_local(i,i)
             else
+               if((rank.eq.0).and.(n.eq.2)) write(*,*) i, j, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
                ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
             end if
             call kahan_sum_c(ninj_local,ninj_c(n),ninj_one(n))
@@ -709,6 +772,41 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
       do i=1,Nsite,1
          do j=1,Nsite,1
 
+            !In terms of sites
+            sitej=sublattice_site_to_true_site(j)
+            sitei=sublattice_site_to_true_site(i)
+            do m=1,Dimen,1
+               !We calculate didj==>d1d(j-i+1)
+               !so we need to focus on j-i+1
+               ctmp=coor_true_site(sitej,m)-coor_true_site(sitei,m)+1
+               if(m.eq.1) then
+                  cc(m)=bound(ctmp,2*Nl(m))
+               else if(m.eq.2) then
+                  cc(m)=bound(ctmp,Nl(m))
+               end if
+            end do
+            n=latt_label_true_site(cc(1:Dimen))
+
+            !if(rank.eq.0) then
+            !   write(*,*) sitei, sitej, n
+            !end if
+            
+            !Niu Nju
+            if(i.eq.j) then
+               ninj_local=Amat_local(i,i)
+            else
+               if((rank.eq.0).and.(n.eq.2)) write(*,*) sitei, sitej, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
+               ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
+            end if
+            call kahan_sum_c(ninj_local,ninj_true_site_c(n),&
+                 & ninj_true_site_one(n))
+
+            !Niu Njd
+            ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
+            call kahan_sum_c(ninj_local,ninj_true_site_c(n+Nsite), &
+                 & ninj_true_site_one(n+Nsite))
+            
+            !In terms of sublattices
             do m=1,Dimen,1
                !We calculate didj==>d1d(j-i+1)
                !so we need to focus on j-i+1
@@ -716,7 +814,7 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
                cc(m)=bound(ctmp,Nl(m))
             end do
             n=latt_label(cc(1:Dimen))
-
+            
             !AA
             if((i.le.Nbravais).and.(j.le.Nbravais)) then
                !Niu Nju
@@ -726,10 +824,11 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
                   ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
                end if
                call kahan_sum_c(ninj_local,ninj_c(n),ninj_one(n))
-
+               
                !Niu Njd
                ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
                call kahan_sum_c(ninj_local,ninj_c(n+2*Nsite),ninj_one(n+2*Nsite))
+               
             !AB   
             else if((i.le.Nbravais).and.(j.gt.Nbravais)) then
                !Niu Nju
@@ -770,6 +869,7 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
                ninj_local=Amat_local(i,i)*Amat_local(j+Nsite,j+Nsite)
                call kahan_sum_c(ninj_local,ninj_c(n+3*Nbravais+2*Nsite),ninj_one(n+3*Nbravais+2*Nsite))
             end if
+            
          end do
       end do
    end if
@@ -869,6 +969,181 @@ else if ((openbcx.eq.1).and.(openbcy.eq.1)) then
 end if
 
 end subroutine add_ninj
+
+
+subroutine add_bond_l(Amat_local)
+use all_param
+implicit none
+complex(kind=8),intent(IN)::Amat_local(DNsite,DNsite)
+complex(kind=8)::d_local
+integer,external::latt_label_true_site
+integer,external::bound
+integer::cc(1:Dimen),ctmp,n,m
+integer::site1_bond1,site2_bond1,sitei,sitej
+integer::site1_bond2,site2_bond2
+integer::i,k,l,xhat,lxhat,xhat_lxhat
+!
+!!loop over dimension
+!!do j = 1, Dimen, 1
+!!loop over bonds
+!do l = 1, 
+!   !sum over sites
+!   do i = 1, Nsite, 1
+!
+!      if(i.le.Nbravais) then
+!         xhat=i+Nbravais
+!
+!         if(mod(2,l).eq.0) then
+!            ctmp=coor(i,1)+int(l/2)
+!            cc(1)=bound(ctmp,Nl(1))
+!            cc(2)=coor(i,2)
+!            lxhat=latt_label(cc(1:Dimen))
+!         else
+!            ctmp=coor(i,1)+int((l-1)/2)
+!            cc(1)=bound(ctmp,Nl(1))
+!            cc(2)=coor(i,2)
+!            lxhat=latt_label(cc(1:Dimen))+Nbravais
+!         end if
+!         
+!         ctmp=coor(i,1)+l
+!         cc(1)=bound(ctmp,Nl(1))
+!         cc(2)=coor(i,2)
+!         lxhat=latt_label(cc(1:Dimen))
+!
+!         ctmp=coor(i,1)+l+1
+!         cc(1)=bound(ctmp,Nl(1))
+!         cc(2)=coor(i,2)
+!         xhat_lxhat=latt_label(cc(1:Dimen))
+!         
+!      else if(i.gt.Nbravais) then
+!         ctmp=coor(i,1)+1
+!         cc(1)=bound(ctmp,Nl(1))
+!         cc(2)=coor(i,2)
+!         xhat=latt_label(cc(1:Dimen))
+!
+!         ctmp=coor(i,1)+l
+!         cc(1)=bound(ctmp,Nl(1))
+!         cc(2)=coor(i,2)
+!         lxhat=latt_label(cc(1:Dimen))
+!
+!         ctmp=coor(i,1)+l+1
+!         cc(1)=bound(ctmp,Nl(1))
+!         cc(2)=coor(i,2)
+!         xhat_lxhat=latt_label(cc(1:Dimen))
+!
+!      end if
+!            
+!      !D^{xx}
+!      if(xhat.eq.lxhat) d_local = d_local + Amat(i,xhat_lxhat) + Amat(i+Nsite,xhat_lxhat+Nsite)
+!      d_local = d_local(l) + Amat_local(lxhat,xhat_lxhat)*Amat_local(i,xhat) &
+!           & - Amat_local(lxhat,xhat)*Amat_local(i,xhat_lxhat)
+!      d_local = d_local(l) + Amat_local(lxhat+Nsite,xhat_lxhat+Nsite)*Amat_local(i+Nsite,xhat+Nsite) &
+!           & - Amat_local(lxhat+Nsite,xhat+Nsite)*Amat_local(i+Nsite,xhat_lxhat+Nsite)
+!
+!      if(xhat.eq.xhat_lxhat) d_local = d_local + Amat(i,lxhat) + Amat(i+Nsite,lxhat+Nsite)
+!      d_local = d_local(l) + Amat_local(xhat_lxhat,lxhat)*Amat_local(i,xhat) &
+!           & - Amat_local(xhat_lxhat,xhat)*Amat_local(i,lxhat)
+!      d_local = d_local(l) + Amat_local(xhat_lxhat+Nsite,lxhat+Nsite)*Amat_local(i+Nsite,xhat+Nsite) &
+!           & - Amat_local(xhat_lxhat+Nsite,xhat+Nsite)*Amat_local(i+Nsite,lxhat+Nsite)
+!
+!      if(i.eq.lxhat) d_local = d_local + Amat(xhat,xhat_lxhat) + Amat(xhat+Nsite,xhat_lxhat+Nsite)
+!      d_local = d_local(l) + Amat_local(lxhat,xhat_lxhat)*Amat_local(xhat,i) &
+!           & - Amat_local(lxhat,i)*Amat_local(xhat,xhat_lxhat)
+!      d_local = d_local(l) + Amat_local(lxhat+Nsite,xhat_lxhat+Nsite)*Amat_local(xhat+Nsite,i+Nsite) &
+!           & - Amat_local(lxhat+Nsite,i+Nsite)*Amat_local(xhat+Nsite,xhat_lxhat+Nsite)
+!      
+!      d_local = d_local + Amat_local(xhat_lxhat,lxhat)*Amat_local(xhat,i) &
+!           & - Amat_local(xhat_lxhat,i)*Amat_local(xhat,lxhat)
+!      d_local = d_local + Amat_local(xhat_lxhat+Nsite,lxhat+Nsite)*Amat_local(xhat+Nsite,i+Nsite) &
+!           & - Amat_local(xhat_lxhat+Nsite,i+Nsite)*Amat_local(xhat+Nsite,lxhat+Nsite)
+!      
+!      call kahan_sum_c(d_local,d_c(l),d_one(l))
+!
+!   end do
+!end do
+!
+do l = 1, Nbonds_par, 1
+
+   site1_bond1=par_bonds(1,l)
+   site2_bond1=par_bonds(2,l)
+   
+   do k = 1, Nbonds_par, 1
+
+      d_local = zero
+      site1_bond2=par_bonds(1,k)
+      site2_bond2=par_bonds(2,k)
+
+      i=site1_bond1
+      xhat=site2_bond1
+      lxhat=site1_bond2
+      xhat_lxhat=site2_bond2
+
+      !In terms of sites
+      sitej=sublattice_site_to_true_site(site1_bond2)
+      sitei=sublattice_site_to_true_site(site1_bond1)
+      
+      do m=1,Dimen,1
+         !We calculate didj==>d1d(j-i+1)
+         !so we need to focus on j-i+1
+         ctmp=coor_true_site(sitej,m)-coor_true_site(sitei,m)+1
+         if(m.eq.1) then
+            cc(m)=bound(ctmp,2*Nl(m))
+         else if(m.eq.2) then
+            cc(m)=bound(ctmp,Nl(m))
+         end if
+      end do
+      
+      !do m=1,Dimen,1
+      !   !We calculate didj==>d1d(j-i+1)
+      !   !so we need to focus on j-i+1
+      !   !if(m.eq.1) then
+      !   !   ctmp=coor(site1_bond2,m)-coor(site1_bond1,m)+1
+      !   !   cc(m)=bound(ctmp,Nl(m))
+      !   !else
+      !   !   cc(m)=coor(site1_bond2,m)-coor(site1_bond1,m)+1
+      !   !end if
+      !   if(m.eq.1) then
+      !      ctmp=coor(site1_bond2,m)-coor(site1_bond1,m)+1
+      !      cc(m)=bound(ctmp,Nl(m))
+      !   else
+      !      cc(m)=coor(site1_bond2,m)-coor(site1_bond1,m)+1
+      !   end if
+      !end do
+      n=latt_label_true_site(cc(1:Dimen))
+
+      !if(rank.eq.0) write(*,*) site1_bond1, site1_bond2, n
+      !if(rank.eq.0) write(*,*) l, k, i, xhat, lxhat, xhat_lxhat, n
+      
+      !D^{xx}
+      if(xhat.eq.lxhat) d_local = d_local + Amat_local(i,xhat_lxhat) + Amat_local(i+Nsite,xhat_lxhat+Nsite)
+      d_local = d_local + Amat_local(lxhat,xhat_lxhat)*Amat_local(i,xhat) &
+           & - Amat_local(lxhat,xhat)*Amat_local(i,xhat_lxhat)
+      d_local = d_local + Amat_local(lxhat+Nsite,xhat_lxhat+Nsite)*Amat_local(i+Nsite,xhat+Nsite) &
+           & - Amat_local(lxhat+Nsite,xhat+Nsite)*Amat_local(i+Nsite,xhat_lxhat+Nsite)
+
+      if(xhat.eq.xhat_lxhat) d_local = d_local + Amat_local(i,lxhat) + Amat_local(i+Nsite,lxhat+Nsite)
+      d_local = d_local + Amat_local(xhat_lxhat,lxhat)*Amat_local(i,xhat) &
+           & - Amat_local(xhat_lxhat,xhat)*Amat_local(i,lxhat)
+      d_local = d_local + Amat_local(xhat_lxhat+Nsite,lxhat+Nsite)*Amat_local(i+Nsite,xhat+Nsite) &
+           & - Amat_local(xhat_lxhat+Nsite,xhat+Nsite)*Amat_local(i+Nsite,lxhat+Nsite)
+
+      if(i.eq.lxhat) d_local = d_local + Amat_local(xhat,xhat_lxhat) + Amat_local(xhat+Nsite,xhat_lxhat+Nsite)
+      d_local = d_local + Amat_local(lxhat,xhat_lxhat)*Amat_local(xhat,i) &
+           & - Amat_local(lxhat,i)*Amat_local(xhat,xhat_lxhat)
+      d_local = d_local + Amat_local(lxhat+Nsite,xhat_lxhat+Nsite)*Amat_local(xhat+Nsite,i+Nsite) &
+           & - Amat_local(lxhat+Nsite,i+Nsite)*Amat_local(xhat+Nsite,xhat_lxhat+Nsite)
+      
+      d_local = d_local + Amat_local(xhat_lxhat,lxhat)*Amat_local(xhat,i) &
+           & - Amat_local(xhat_lxhat,i)*Amat_local(xhat,lxhat)
+      d_local = d_local + Amat_local(xhat_lxhat+Nsite,lxhat+Nsite)*Amat_local(xhat+Nsite,i+Nsite) &
+           & - Amat_local(xhat_lxhat+Nsite,i+Nsite)*Amat_local(xhat+Nsite,lxhat+Nsite)
+      
+      call kahan_sum_c(d_local,d_c(n),d_one(n))
+
+   end do
+end do
+
+end subroutine add_bond_l
 
 
 subroutine add_edgec(Amat_local)
@@ -1024,6 +1299,8 @@ if(dtype.ne.'w') then
 else if(dtype.eq.'w') then
    allocate(didj_one(DNsite))
    allocate(didj_c(DNsite))
+   allocate(didj_true_site_one(Nsite))
+   allocate(didj_true_site_c(Nsite))
 endif
 allocate(dk_one(Nsite))
 allocate(sisj_one(Nsite))
@@ -1035,6 +1312,10 @@ if(dtype.ne.'w') then
 else if(dtype.eq.'w') then
    allocate(ninj_one(2*DNsite))
    allocate(ninj_c(2*DNsite))
+   allocate(ninj_true_site_one(DNsite))
+   allocate(ninj_true_site_c(DNsite))
+   allocate(d_one(Nbonds_par))
+   allocate(d_c(Nbonds_par))
 end if
 allocate(edgecup_one(Nsite,Nsite))
 allocate(edgecup_c(Nsite,Nsite))
@@ -1069,6 +1350,10 @@ if(allocated(sisj_one)) deallocate(sisj_one)
 if(allocated(sisj_c)) deallocate(sisj_c)
 if(allocated(sk_one)) deallocate(sk_one)
 if(allocated(ninj_one)) deallocate(ninj_one)
+if(allocated(ninj_true_site_one)) deallocate(ninj_true_site_one)
+if(allocated(ninj_true_site_c)) deallocate(ninj_true_site_c)
+if(allocated(d_one)) deallocate(d_one)
+if(allocated(d_c)) deallocate(d_c)
 if(allocated(ninj_c)) deallocate(ninj_c)
 if(allocated(edgecup_c)) deallocate(edgecup_c)
 if(allocated(edgecup_one)) deallocate(edgecup_one)

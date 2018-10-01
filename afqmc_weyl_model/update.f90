@@ -22,6 +22,13 @@ if(thermstep.LE.Nlen/2) then
   call allocate_one_meas()
   niup_one=zero;niup_c=zero
   nidn_one=zero;nidn_c=zero
+  if(dtype.eq.'w') then
+     d_one=zero;d_c=zero
+     ninj_true_site_one=zero
+     ninj_true_site_c=zero
+     didj_true_site_one=zero
+     didj_true_site_c=zero
+  end if
   didj_one=zero;didj_c=zero
   sisj_one=zero;sisj_c=zero
   ninj_one=zero;ninj_c=zero

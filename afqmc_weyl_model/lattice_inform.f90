@@ -23,17 +23,20 @@ integer::Nhop ! the number of the hoping terms need to consider
 integer::openbcx, openbcy ! 1 for open BCs, 0 for other BCs
 integer,parameter::Dimen=2 !the dimension
 integer::Nl(3) !the number of different axis
+integer::bpr,bpc,Nbonds_par,Nbonds_perp
 real(kind=8)::kbound(3) !the twist boundary condition number
 complex(kind=8)::t1      !Hubbard hopping t1 in nearest direction(-1).
 complex(kind=8)::vhop,whop !v, w parameter from SSH model
 complex(kind=8)::tyhop,tdhop !vertical and diagonal hopping b/w 1D SSH chains
 real(kind=8)::lamda   !spin orbit coupling parameters-some in the note
-
 complex(kind=8),allocatable::hopt(:) !hopt and sit record the information
 integer,allocatable::sit(:,:)        !of hoping term in different sites
 integer,allocatable::coor(:,:) ! we label the site, it record the coordinate
+integer,allocatable::coor_true_site(:,:)
+integer,allocatable::sublattice_site_to_true_site(:)
 integer,allocatable::Tmatrix(:,:) !Use to store the nearest hopping in different direction.
 complex(kind=8),allocatable::Hzero(:,:)    !2*Nsite,2*Nsite,the Hezo Hamiltonian of the lattice
+integer,allocatable::par_bonds(:,:), perp_bonds(:,:)
 end module lattice_param
 
 
@@ -62,6 +65,19 @@ if(set.NE.1) then
       !Nbravais unit cells, with 2 sites (i.e. 2 bands) per unit cell
       Nsite=2*Nbravais
       Nhop=16*Nbravais
+      if(openbcx.eq.0) then
+         bpr = 2*Nl(1)
+      else if(openbcx.eq.1) then
+         bpr = 2*Nl(1) - 1
+      end if
+      Nbonds_par=bpr*Nl(2)
+      if(rank.eq.0) write(*,*) 'Nbonds_par: ', Nbonds_par
+      if(openbcy.eq.0) then
+         bpc = Nl(2)
+      else if(openbcx.eq.1) then
+         bpc = Nl(1) - 1
+      end if
+      Nbonds_perp=bpc*Nl(1)
    endif
 
    !Set Nl to 1 for non-relevant dimension
@@ -78,19 +94,33 @@ if(rank.eq.0) write(*,*) 'Nsites: ', Nsite
 
  call allocate_lattice_array()
  call set_lattice_hop()
-
+ if(dtype.eq.'w') then
+    call bond_to_sites()
+    if(rank.eq.0) then
+    !   do i=1,Nbonds_par, 1
+    !      write(*,*) Nbonds_par, i, par_bonds(1,i), par_bonds(2,i)
+       !   end do
+       do i=1,Nsite,1
+          write(*,*) i, sublattice_site_to_true_site(i), &
+               & coor_true_site(sublattice_site_to_true_site(i),1), &
+               & coor_true_site(sublattice_site_to_true_site(i),2)
+       end do
+    end if
+ end if
+ 
  Hzero=(0.d0,0.d0)
  do mi=1,Nhop,1
     Hzero(sit(mi,1),sit(mi,2))=Hzero(sit(mi,1),sit(mi,2))+hopt(mi)
     Hzero(sit(mi,1)+Nsite,sit(mi,2)+Nsite)=Hzero(sit(mi,1)+Nsite,sit(mi,2)+Nsite)+hopt(mi)
  end do
 
+ 
 !if (rank.eq.0) then
 !    do i=1,Nsite,1
 !       do j=1,Nsite,1
-!          !write(*,'(100(A1,F5.2,A1,F5.2,A1))') ('(',real(Hzero(i,j)),',',imag(Hzero(i,j)),')',j=1,DNsite)
+!!          !write(*,'(100(A1,F5.2,A1,F5.2,A1))') ('(',real(Hzero(i,j)),',',imag(Hzero(i,j)),')',j=1,DNsite)
 !          write(*,*) i,j,real(Hzero(i,j)),imag(Hzero(i,j)), real(Hzero(j,i)), imag(Hzero(j,i))
-!!       !write(*,'(100(F5.2,A3,F5.2,A3))') (real(Hzero(i,j)),'+i*',imag(Hzero(i,j)),' ',j=1,DNsite)
+!!!       !write(*,'(100(F5.2,A3,F5.2,A3))') (real(Hzero(i,j)),'+i*',imag(Hzero(i,j)),' ',j=1,DNsite)
 !       end do
 !    end do
 ! end if
@@ -189,6 +219,37 @@ elseif(dtype.eq.'w') then
          coor(i+Nbravais,j)=coor(i,j)
       enddo
    enddo
+
+   !map sublattice site to true lattice sites
+   !ind=1
+   !do j=1,Nl(2),1
+   !   do i=1,Nl(1),1
+   !      sublattice_site_to_true_site(ind)=2*coor(ind,1)-1+(j-1)*2*Nl(1)
+   !      sublattice_site_to_true_site(ind+Nbravais)=unit_cell_to_site(ind)+1
+   !      ind=ind+1
+   !   end do
+   !end do
+
+   do i=1,Nbravais
+      sublattice_site_to_true_site(i)=2*i-1
+      sublattice_site_to_true_site(i+Nbravais)=2*i
+   end do
+      
+   do i=1,Nsite,1
+      ntemp=i-1
+      do j=Dimen,1,-1
+         den=1
+         do k=1,j-1,1
+            den=den*2*Nl(k)
+         end do !den is z coor Nl(1)*Nl(2)
+                !       y coor Nl(1)
+                !       x coor 1
+         coor_true_site(i,j)=ntemp/den
+         ntemp=ntemp-coor_true_site(i,j)*den
+         coor_true_site(i,j)=coor_true_site(i,j)+1
+      end do
+   end do
+   
 endif
 
  
@@ -1281,6 +1342,46 @@ do i=1,Nsite,1
 end do
 end subroutine set_Tmatrix
 
+subroutine bond_to_sites
+  use lattice_param
+  use mpi_serial_param
+implicit none
+integer   :: l, j, count
+
+count = 0
+do l=1,bpr,2
+   !set first row
+   par_bonds(1,l) = l - count
+   par_bonds(2,l) = l - count + Nbravais
+   count = count + 1
+   
+   do j=1,Nl(2)-1,1
+      if(rank.eq.0) write(*,*) l+j*bpr
+      par_bonds(1,l+j*bpr) = par_bonds(1,l) + j*Nl(1)
+      par_bonds(2,l+j*bpr) = par_bonds(2,l) + j*Nl(1)
+   end do
+
+end do
+
+count = 0
+do l = 2, bpr, 2
+   par_bonds(1,l) = l - (count + 1) + Nbravais
+   if(mod(l/2,Nl(1)).eq.0) then
+      par_bonds(2,l) = l - count - Nl(1)
+   else
+      par_bonds(2,l) = l - count
+   end if
+   count = count + 1
+   
+   do j=1,Nl(2)-1,1
+      if(rank.eq.0) write(*,*) l+j*bpr
+      par_bonds(1,l+j*bpr) = par_bonds(1,l) + j*Nl(1)
+      par_bonds(2,l+j*bpr) = par_bonds(2,l) + j*Nl(1)
+   end do
+   
+end do
+
+end subroutine bond_to_sites
 
 !--------------------------------------------------------
 !It is a bound function use to fit the boundary condtion.
@@ -1316,6 +1417,32 @@ end if
 end function
 
 
+!-------------------------------------------------------
+!give in coord(Dimen), give out the number label 1~Nsite
+!-------------------------------------------------------
+integer function latt_label_true_site(coord)
+use lattice_param
+implicit none
+integer,intent(IN)::coord(1:Dimen)
+integer::den,i
+
+latt_label_true_site=1
+den=1
+do i=1,Dimen,1
+   latt_label_true_site=latt_label_true_site+(coord(i)-1)*den
+   if(i.eq.1) then
+      den=den*2*Nl(i)
+   else
+      den=den*Nl(i)
+   end if
+end do
+if(latt_label_true_site.LT.1.OR.latt_label_true_site.GT.Nsite) then
+  write(*,*) "Something is wrong with latt_label_true_site output:",latt_label_true_site
+  call mystop
+end if
+end function
+
+
 !input k, get q=-k
 subroutine inverse_momentum(k,q)
 use lattice_param
@@ -1337,11 +1464,18 @@ end subroutine inverse_momentum
 !This subroutine allocate the arrays we need to use in set lattice
 !-----------------------------------------------------------------
 subroutine allocate_lattice_array()
-use lattice_param
+  use lattice_param
+  use model_param
 implicit none
 allocate(hopt(Nhop))
 allocate(sit(Nhop,2))
 allocate(coor(Nsite,Dimen))
+if(dtype.eq.'w') then
+   allocate(coor_true_site(Nsite,Dimen))
+   allocate(sublattice_site_to_true_site(Nsite))
+   allocate(par_bonds(2,Nbonds_par))
+end if
+!if(dtype.eq.'w') allocate(perp_bonds(2,Nbonds_perp))
 allocate(Hzero(DNsite,DNsite))
 allocate(Tmatrix(Nsite,Dimen))
 end subroutine allocate_lattice_array
@@ -1351,11 +1485,16 @@ end subroutine allocate_lattice_array
 !This subroutine deallocate the arrays we need to use in set lattice
 !-------------------------------------------------------------------
 subroutine deallocate_lattice_array()
-use lattice_param
+  use lattice_param
+  use model_param
 implicit none
 if(allocated(hopt)) deallocate(hopt)
 if(allocated(sit)) deallocate(sit)
 if(allocated(coor)) deallocate(coor)
+if(allocated(coor_true_site)) deallocate(coor_true_site)
+if(allocated(sublattice_site_to_true_site)) deallocate(sublattice_site_to_true_site)
+if(allocated(par_bonds)) deallocate(par_bonds)
+!if(allocated(perp_bonds)) deallocate(perp_bonds)
 if(allocated(Hzero)) deallocate(Hzero)
 if(allocated(Tmatrix)) deallocate(Tmatrix)
 end subroutine deallocate_lattice_array

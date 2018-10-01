@@ -1,0 +1,35 @@
+2        !set:1 by hand 2 TBC
+9      !Nsite->set=1
+36       !Nhop->set=1
+4        !Nl(1)->set/=1 & Dimen>=1
+1        !Nl(2)->set/=1 & Dimen>=2
+1        !Nl(3)->set/=1 & Dimen=3
+0.d0    !kbound(1)->set=3 & Dimen>=1
+0.d0    !kbound(2)->set=3 & Dimen>=2
+0.d0    !kbound(3)->set=3 & Dimen>=3
+0     !open BCs -> 1, other BCs ->0
+0     !open BCs -> 1, other BCs ->0
+(0.d0,0.d0)  !t1 Hubbard hopping t1 in nearest direction.
+(-0.7d0,0.d0)  !v (intra-unit-cell hopping)
+(-1.d0,0.d0)  !w (inter-unit-cell hopping) 
+(0.d0,0.d0)  !ty hopping in y-direction
+(0.d0,0.d0)  !td hopping in diagonal direction
+0.0      !lamda spin orbit coupling strength
+-2.0     !onsitU Hubbard U interaction on the same site.
+4       !Ntot the up spin and down spin particle numbers
+w      !dtype for the determinant type: d decoupled, c coupled, w weyl model
+2     !Nspin(1) means Nup
+2     !Nspin(2) means Ndn
+0.025d0         !dt each slice of imagine time
+1       !kcrn 1.d s;2.d c for different kinds of release method
+1      !bgset 0. mean field 1. dynamic background walker
+1       !pfft 0.do not use fftw  1. use fftw for the code
+1      !diagm 0. get all the matrix 1. only measure diaganal matrix. pfft must be 1.
+10     !Ntherm number of therm
+20      !Nmeas number of measurement
+10   !StepforGram number of steps when we do modified GS
+0         !PP:0 phi and aux from code, 1 aux from code read phi, 2 read aux and phi
+2500       !Nlen for the length of the beta
+50        !blk the size of the block
+25    !meastep how often to measure.
+50  !thermstep therm for non-commute observables.

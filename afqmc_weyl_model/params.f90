@@ -92,8 +92,11 @@ complex(kind=8)::Nup_one,Nup_c,Ndn_one,Ndn_c
 complex(kind=8)::nconds_one,ncondt_one
 complex(kind=8)::nconds_c,ncondt_c
 complex(kind=8),allocatable::didj_one(:),didj_c(:),dk_one(:)
+complex(kind=8),allocatable::didj_true_site_one(:),didj_true_site_c(:)
 complex(kind=8),allocatable::sisj_one(:),sisj_c(:),sk_one(:)
 complex(kind=8),allocatable::ninj_one(:),ninj_c(:),nnk_one(:)
+complex(kind=8),allocatable::ninj_true_site_one(:),ninj_true_site_c(:)
+complex(kind=8),allocatable::d_one(:),d_c(:)
 complex(kind=8),allocatable::edgecup_one(:,:),edgecup_c(:,:)
 complex(kind=8),allocatable::edgecdn_one(:,:),edgecdn_c(:,:)
 complex(kind=8),allocatable::niup_one(:),niup_c(:)
@@ -103,7 +106,7 @@ complex(kind=8),allocatable::sky_one(:),sky_c(:)
 complex(kind=8),allocatable::ck_one(:),ck_c(:)
 complex(kind=8),allocatable::pair_full(:,:),onebody(:,:)
 character(len=300)::basename,EnergyName,numName,scorrName,skName,cksName,didjName,dkName
-character(len=300)::ninjName,nnkName,pairmName,edgecName,niName
+character(len=300)::ninjName,nnkName,pairmName,edgecName,niName,bondName
 integer(kind=8)::Nupdate,Naccept
 end module meas_param
 

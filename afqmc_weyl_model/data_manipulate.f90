@@ -160,6 +160,22 @@ end do
 #endif
        if(rank.eq.0) write(16,'(1I4,3E26.16)') i,dble(mean_c),dimag(mean_c),error
     end do
+
+    if(dtype.eq.'w') then
+       do i=1,Nsite,1
+          didj_true_site_one(i)=didj_true_site_one(i)/dble(i_observ*Nsite)
+#ifdef MPI
+          call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+          call MPI_GATHER(didj_true_site_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+          call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+          mean_c=didj_true_site_one(i)
+          error=0.d0
+#endif
+          if(rank.eq.0) write(16,'(1I4,3E26.16)') i,dble(mean_c),dimag(mean_c),error
+       end do
+    end if
+    
     if(rank.eq.0) close(16)
 
     if((openbcx.eq.0).and.(openbcy.eq.0)) then
@@ -278,6 +294,24 @@ end do
 #endif
        if(rank.eq.0) write(16,'(1I4,3E26.16)') i,dble(mean_c),dimag(mean_c),error
     end do
+
+    if(dtype.eq.'w') then
+       do i=1,DNsite,1
+          if((openbcx.eq.0).and.(openbcy.eq.0)) then
+             ninj_true_site_one(i)=ninj_true_site_one(i)/dble(i_observ*Nsite)
+          end if
+#ifdef MPI
+          call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+          call MPI_GATHER(ninj_true_site_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+          call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+          mean_c=ninj_true_site_one(i)
+          error=0.d0
+#endif
+          if(rank.eq.0) write(16,'(1I4,3E26.16)') i,dble(mean_c),dimag(mean_c),error
+       end do
+    end if
+    
     if(rank.eq.0) close(16)
 
  if((openbcx.eq.0).and.(openbcy.eq.0)) then
@@ -350,6 +384,26 @@ end do
     end do
     if(rank.eq.0) close(16)
 
+    !write bond bond correlation
+    if(dtype.eq.'w') then
+       if(rank.eq.0) call openUnit(bondName,16,'R')
+       
+       do i=1,Nbonds_par,1
+          if((openbcx.eq.0).and.(openbcy.eq.0)) then
+             d_one(i)=d_one(i)/dble(i_observ*Nbonds_par)
+          end if
+#ifdef MPI
+          call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+          call MPI_GATHER(d_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+          call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+          mean_c=d_one(i)
+          error=0.d0
+#endif
+          if(rank.eq.0) write(16,'(1I4,3E26.16)') i,dble(mean_c),dimag(mean_c),error
+       end do
+       if(rank.eq.0) close(16)
+    end if
 
     ! condensate fraction
     nconds_one=nconds_one/dble(i_observ)

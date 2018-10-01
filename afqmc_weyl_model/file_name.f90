@@ -67,6 +67,9 @@ call appendBaseName(dkName,'_dk.dat')
 call copyName(BaseName,ninjName)
 call appendBaseName(ninjName,'_ninj.dat')
 
+call copyName(BaseName,bondName)
+call appendBaseName(bondName,'_bond.dat')
+
 call copyName(BaseName,nnkName)
 call appendBaseName(nnkName,'_nnk.dat')
 

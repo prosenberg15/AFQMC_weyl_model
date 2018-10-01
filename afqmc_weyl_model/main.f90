@@ -33,7 +33,7 @@ implicit none
 !--------------------------------------------------
  call init_mpi_type(dtype,Nsite,Ntot,Nspin)
 
-
+ 
 !------------------------
 !initial the plan in fftw
 !------------------------
