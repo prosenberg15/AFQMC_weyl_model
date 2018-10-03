@@ -218,7 +218,7 @@ i_observ=i_observ+1
       Kinm_local=Kinm_local+hopt(mi)*Amat_local(sit(mi,1),sit(mi,2))
       Kinm_local=Kinm_local+hopt(mi)*Amat_local(sit(mi,1)+Nsite,sit(mi,2)+Nsite)
    end do
-   if(rank.eq.0) write(*,*) 'total K: ', Kinm_local
+   !if(rank.eq.0) write(*,*) 'total K: ', Kinm_local
    call kahan_sum_c(Kinm_local,K_c,K_one)
 end if
 
@@ -281,7 +281,7 @@ end if
 
     !spin direction
     call add_sk(Amat_local_k)
-
+    
     !for the pairing wf 
     call add_pair_one_body(Amat_local_k)
     deallocate(Amat_local,Amat_local_k)
@@ -758,7 +758,7 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
             if(i.eq.j) then
                ninj_local=Amat_local(i,i)
             else
-               if((rank.eq.0).and.(n.eq.2)) write(*,*) i, j, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
+               !if((rank.eq.0).and.(n.eq.2)) write(*,*) i, j, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
                ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
             end if
             call kahan_sum_c(ninj_local,ninj_c(n),ninj_one(n))
@@ -795,7 +795,7 @@ if ((openbcx.eq.0).and.(openbcy.eq.0)) then
             if(i.eq.j) then
                ninj_local=Amat_local(i,i)
             else
-               if((rank.eq.0).and.(n.eq.2)) write(*,*) sitei, sitej, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
+               !if((rank.eq.0).and.(n.eq.2)) write(*,*) sitei, sitej, n, Amat_local(j,j), Amat_local(i,i), Amat_local(i,j), Amat_local(j,i)
                ninj_local=Amat_local(i,i)*Amat_local(j,j)-Amat_local(i,j)*Amat_local(j,i)
             end if
             call kahan_sum_c(ninj_local,ninj_true_site_c(n),&
@@ -1231,7 +1231,7 @@ use all_param
 implicit none
 complex(kind=8),intent(IN)::Amat_local(DNsite,DNsite)
 complex(kind=8)::nconds_local,ncondt_local
-integer::k,q,mk,mq
+integer::k,q,sitek,siteq,mk,mq
 !add one-body density matrix
 do k=1,DNsite,1
    do q=1,DNsite,1
@@ -1239,51 +1239,80 @@ do k=1,DNsite,1
    end do
 end do
 
-!build up the full matrix, only build half of the matrix
-do k=1,Nsite,1
-   call inverse_momentum(k,mk)
-   do q=1,Nsite,1
-      call inverse_momentum(q,mq)
+if(dtype.ne.'w') then
+   !build up the full matrix, only build half of the matrix
+   do k=1,Nsite,1
+      call inverse_momentum(k,mk)
+      do q=1,Nsite,1
+         call inverse_momentum(q,mq)
 
-      !triplet condensate fraction
-      ncondt_local=Amat_local(k,q)*Amat_local(mk,mq)-Amat_local(k,mq)*Amat_local(mk,q)
-      if (k.eq.q) then
-         call kahan_sum_c(ncondt_local,ncondt_c,ncondt_one)
-      endif
+         !triplet condensate fraction
+         ncondt_local=Amat_local(k,q)*Amat_local(mk,mq)-Amat_local(k,mq)*Amat_local(mk,q)
+         if (k.eq.q) then
+            call kahan_sum_c(ncondt_local,ncondt_c,ncondt_one)
+         endif
 
-      !11
-      pair_full(k,q)=pair_full(k,q)+ncondt_local!+Amat_local(k,q)*Amat_local(mk,mq)-Amat_local(k,mq)*Amat_local(mk,q)
+         !11
+         pair_full(k,q)=pair_full(k,q)+ncondt_local!+Amat_local(k,q)*Amat_local(mk,mq)-Amat_local(k,mq)*Amat_local(mk,q)
       
-      !12
-      pair_full(k,q+Nsite)=pair_full(k,q+Nsite)+Amat_local(k,q+Nsite)*Amat_local(mk,mq+Nsite)- &
-                        &  Amat_local(k,mq+Nsite)*Amat_local(mk,q+Nsite)
-      !13
-      pair_full(k,q+DNsite)=pair_full(k,q+DNsite)+0.5d0*(Amat_local(k,q)*Amat_local(mk,mq+Nsite)- &
-       & Amat_local(k,mq+Nsite)*Amat_local(mk,q))-0.5d0*(Amat_local(k,q+Nsite)*Amat_local(mk,mq)- &
-       & Amat_local(k,mq)*Amat_local(mk,q+Nsite))
+         !12
+         pair_full(k,q+Nsite)=pair_full(k,q+Nsite)+Amat_local(k,q+Nsite)*Amat_local(mk,mq+Nsite)- &
+              &  Amat_local(k,mq+Nsite)*Amat_local(mk,q+Nsite)
+         !13
+         pair_full(k,q+DNsite)=pair_full(k,q+DNsite)+0.5d0*(Amat_local(k,q)*Amat_local(mk,mq+Nsite)- &
+              & Amat_local(k,mq+Nsite)*Amat_local(mk,q))-0.5d0*(Amat_local(k,q+Nsite)*Amat_local(mk,mq)- &
+              & Amat_local(k,mq)*Amat_local(mk,q+Nsite))
 
-      !22
-      pair_full(k+Nsite,q+Nsite)=pair_full(k+Nsite,q+Nsite)+ &
-     &  Amat_local(k+Nsite,q+Nsite)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk+Nsite,q+Nsite)
-      !23
-      pair_full(k+Nsite,q+DNsite)=pair_full(k+Nsite,q+DNsite)+0.5d0*(Amat_local(k+Nsite,q)*Amat_local(mk+Nsite,mq+Nsite)- &
-       & Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk+Nsite,q))-0.5d0*(Amat_local(k+Nsite,q+Nsite)*Amat_local(mk+Nsite,mq)- &
-       & Amat_local(k+Nsite,mq)*Amat_local(mk+Nsite,q+Nsite))
+         !22
+         pair_full(k+Nsite,q+Nsite)=pair_full(k+Nsite,q+Nsite)+ &
+              &  Amat_local(k+Nsite,q+Nsite)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk+Nsite,q+Nsite)
+         !23
+         pair_full(k+Nsite,q+DNsite)=pair_full(k+Nsite,q+DNsite)+0.5d0*(Amat_local(k+Nsite,q)*Amat_local(mk+Nsite,mq+Nsite)- &
+              & Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk+Nsite,q))-0.5d0*(Amat_local(k+Nsite,q+Nsite)*Amat_local(mk+Nsite,mq)- &
+              & Amat_local(k+Nsite,mq)*Amat_local(mk+Nsite,q+Nsite))
 
-      !singlet condensate fraction
-      nconds_local=Amat_local(k,q)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k,mq+Nsite)*Amat_local(mk+Nsite,q)
-      if (k.eq.q) then
-         call kahan_sum_c(nconds_local,nconds_c,nconds_one)
-      endif
+         !singlet condensate fraction
+         nconds_local=Amat_local(k,q)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k,mq+Nsite)*Amat_local(mk+Nsite,q)
+         if (k.eq.q) then
+            call kahan_sum_c(nconds_local,nconds_c,nconds_one)
+         endif
 
-      !33
-      pair_full(k+DNsite,q+DNsite)=pair_full(k+DNsite,q+DNsite)+ & 
-      0.25d0*(nconds_local &
-             +(Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq)-Amat_local(k+Nsite,mq)*Amat_local(mk,q+Nsite)) &
-             -(Amat_local(k,q+Nsite)*Amat_local(mk+Nsite,mq)-Amat_local(k,mq)*Amat_local(mk+Nsite,q+Nsite)) &
-             -(Amat_local(k+Nsite,q)*Amat_local(mk,mq+Nsite)-Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)))
+         !33
+         pair_full(k+DNsite,q+DNsite)=pair_full(k+DNsite,q+DNsite)+ & 
+              0.25d0*(nconds_local &
+              +(Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq)-Amat_local(k+Nsite,mq)*Amat_local(mk,q+Nsite)) &
+              -(Amat_local(k,q+Nsite)*Amat_local(mk+Nsite,mq)-Amat_local(k,mq)*Amat_local(mk+Nsite,q+Nsite)) &
+              -(Amat_local(k+Nsite,q)*Amat_local(mk,mq+Nsite)-Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)))
+      end do
    end do
-end do
+else if(dtype.eq.'w') then
+   !build up the full matrix, only build half of the matrix
+   do k=1,Nsite,1
+      call inverse_momentum(k,mk)
+      do q=k,Nsite,1
+         call inverse_momentum(q,mq)
+
+         pair_full(k,q)=pair_full(k,q)+0.5* &
+              (Amat_local(k,q)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k,mq)*Amat_local(mk+Nsite,q+Nsite) &
+            & -Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)+Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq))
+
+         !MUST COMPLETE PORTION BELOW HERE
+         !12 (AB)
+         !pair_full(k,q+Nbravais)=pair_full(k,q+Nbravais)+0.5* &
+         !     (Amat_local(k,q+Nbravais)*Amat_local(mk+Nsite,mq+Nbravais+Nsite)-Amat_local(k,mq+Nbravais)*Amat_local(mk+Nsite,q+Nbravais+Nsite) &
+         !   & -Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)+Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq))
+         
+         !22 (BB)
+         !pair_full(k+Nbravais,q+Nbravais)=pair_full(k+Nbravais,q+Nbravais)+0.5* &
+         !     (Amat_local(k,q+Nbravais)*Amat_local(mk+Nsite,mq+Nbravais+Nsite)- &
+         !     & Amat_local(k,mq+Nbravais)*Amat_local(mk+Nsite,q+Nbravais+Nsite) 
+         !     & -Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)+Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq))
+         
+      end do
+   end do
+
+end if
+
 end subroutine add_pair_one_body
 
 
@@ -1296,13 +1325,14 @@ implicit none
 if(dtype.ne.'w') then
    allocate(didj_one(Nsite))
    allocate(didj_c(Nsite))
+   allocate(dk_one(Nsite))
 else if(dtype.eq.'w') then
    allocate(didj_one(DNsite))
    allocate(didj_c(DNsite))
+   allocate(dk_one(DNsite))
    allocate(didj_true_site_one(Nsite))
    allocate(didj_true_site_c(Nsite))
 endif
-allocate(dk_one(Nsite))
 allocate(sisj_one(Nsite))
 allocate(sisj_c(Nsite))
 allocate(sk_one(Nsite))
@@ -1345,6 +1375,8 @@ use all_param
 implicit none
 if(allocated(didj_one)) deallocate(didj_one)
 if(allocated(didj_c)) deallocate(didj_c)
+if(allocated(didj_true_site_one)) deallocate(didj_true_site_one)
+if(allocated(didj_true_site_c)) deallocate(didj_true_site_c)
 if(allocated(dk_one)) deallocate(dk_one)
 if(allocated(sisj_one)) deallocate(sisj_one)
 if(allocated(sisj_c)) deallocate(sisj_c)

@@ -1,7 +1,7 @@
 2        !set:1 by hand 2 TBC
 9      !Nsite->set=1
 36       !Nhop->set=1
-6        !Nl(1)->set/=1 & Dimen>=1
+3        !Nl(1)->set/=1 & Dimen>=1
 3        !Nl(2)->set/=1 & Dimen>=2
 1        !Nl(3)->set/=1 & Dimen=3
 0.d0    !kbound(1)->set=3 & Dimen>=1
@@ -10,14 +10,14 @@
 0     !open BCs -> 1, other BCs ->0
 0     !open BCs -> 1, other BCs ->0
 (-1.d0,0.d0)  !t1 Hubbard hopping t1 in nearest direction.
-(-1.d0,0.d0)  !v (intra-unit-cell hopping)
+(-0.7d0,0.d0)  !v (intra-unit-cell hopping)
 (-1.d0,0.d0)  !w (inter-unit-cell hopping) 
-(-1.d0,0.d0)  !ty hopping in y-direction
-(0.d0,0.d0)  !td hopping in diagonal direction
+(-0.5d0,0.d0)  !ty hopping in y-direction
+(-0.6d0,0.d0)  !td hopping in diagonal direction
 0.0      !lamda spin orbit coupling strength
--2.0     !onsitU Hubbard U interaction on the same site.
+-1.0     !onsitU Hubbard U interaction on the same site.
 18       !Ntot the up spin and down spin particle numbers
-d      !dtype for the determinant type: d decoupled, c coupled, w weyl model
+w      !dtype for the determinant type: d decoupled, c coupled, w weyl model
 9     !Nspin(1) means Nup
 9     !Nspin(2) means Ndn
 0.025d0         !dt each slice of imagine time

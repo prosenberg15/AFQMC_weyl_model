@@ -140,7 +140,7 @@ end do
  else if(dtype.eq.'w') then
     Ns=DNsite
  end if
-    do i=1,Ns,1
+ do i=1,Ns,1
        if((openbcx.eq.0).and.(openbcy.eq.0)) then
           if(dtype.ne.'w') then
              didj_one(i)=didj_one(i)/dble(i_observ*Nsite)
@@ -180,11 +180,26 @@ end do
 
     if((openbcx.eq.0).and.(openbcy.eq.0)) then
     !write pairing stucture factor
-    if(rank.eq.0) call openUnit(dkName,16,'R')
-    aforwin(1:Nsite)=didj_one(1:Nsite)
-    call dfftw_execute(planf,aforwin,aforwout)
-    dk_one(1:Nsite)=aforwout(1:Nsite)/dble(Nsite)
-    do i=1,Nsite,1
+       if(rank.eq.0) call openUnit(dkName,16,'R')
+       if(dtype.ne.'w') then
+          aforwin(1:Nsite)=didj_one(1:Nsite)
+          call dfftw_execute(planf,aforwin,aforwout)
+          dk_one(1:Nsite)=aforwout(1:Nsite)/dble(Nsite)
+       else if(dtype.eq.'w') then
+          aforwin(1:Nbravais)=didj_one(1:Nbravais)
+          call dfftw_execute(planf,aforwin,aforwout)
+          dk_one(1:Nbravais)=aforwout(1:Nbravais)/dble(Nbravais)
+          aforwin(1:Nbravais)=didj_one(1+Nbravais:2*Nbravais)
+          call dfftw_execute(planf,aforwin,aforwout)
+          dk_one(1+Nbravais:2*Nbravais)=aforwout(1:Nbravais)/dble(Nbravais)
+          aforwin(1:Nbravais)=didj_one(1+2*Nbravais:3*Nbravais)
+          call dfftw_execute(planf,aforwin,aforwout)
+          dk_one(1+2*Nbravais:3*Nbravais)=aforwout(1:Nbravais)/dble(Nbravais)
+          aforwin(1:Nbravais)=didj_one(1+3*Nbravais:4*Nbravais)
+          call dfftw_execute(planf,aforwin,aforwout)
+          dk_one(1+3*Nbravais:4*Nbravais)=aforwout(1:Nbravais)/dble(Nbravais)
+       end if
+    do i=1,Ns,1
 #ifdef MPI
        call MPI_BARRIER(MPI_COMM_WORLD,IERR)
        call MPI_GATHER(dk_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
@@ -433,8 +448,14 @@ end do
     end if
 
     !deal with pairing matrix
-    do i=1,3*Nsite,1
-       do j=i,3*Nsite,1 ! j count from i, only use upper triangular matrix
+    if(dtype.ne.'w') then
+       Ns=3*Nsite
+    else if(dtype.eq.'w') then
+       Ns=Nsite
+    end if
+    
+    do i=1,Ns,1
+       do j=i,Ns,1 ! j count from i, only use upper triangular matrix
 #ifdef MPI
           pair_full(i,j)=pair_full(i,j)/dble(i_observ)
           call MPI_BARRIER(MPI_COMM_WORLD,IERR)
@@ -445,7 +466,7 @@ end do
 #endif
        end do
     end do
-
+    
     do i=1,DNsite,1
        do j=1,DNsite,1
 #ifdef MPI
@@ -462,13 +483,17 @@ end do
     if(rank.eq.0) then
        call minus_pairing_bg()
        call openUnit(pairmName,16,'R')
-       do i=1,3*Nsite,1
-          do j=1,3*Nsite,1
+       do i=1,Ns,1
+          do j=1,Ns,1
              write(16,'(2I4,2E26.16)') i,j,dble(pair_full(i,j)),dimag(pair_full(i,j))
           end do
        end do
        close(16)
-       call diag_pair(pair_full,3*Nsite)
+       if(dtype.ne.'w') then
+          call diag_pair(pair_full,3*Nsite)
+       else if(dtype.eq.'w') then
+          call diag_pair(pair_full,Nsite)
+       end if
     end if
 
 
@@ -623,38 +648,53 @@ subroutine minus_pairing_bg()
 use all_param
 implicit none
 integer::k,q,mk,mq
-do k=1,Nsite,1
-   call inverse_momentum(k,mk)
-   do q=1,Nsite,1
-      call inverse_momentum(q,mq)
+if(dtype.ne.'w') then
+   do k=1,Nsite,1
+      call inverse_momentum(k,mk)
+      do q=1,Nsite,1
+         call inverse_momentum(q,mq)
 
-      if(q.GE.k) then
-        !11
-         pair_full(k,q)=pair_full(k,q)-(onebody(k,q)*onebody(mk,mq)-onebody(k,mq)*onebody(mk,q))
-        !22
-         pair_full(k+Nsite,q+Nsite)=pair_full(k+Nsite,q+Nsite)- &
-     & (onebody(k+Nsite,q+Nsite)*onebody(mk+Nsite,mq+Nsite)-onebody(k+Nsite,mq+Nsite)*onebody(mk+Nsite,q+Nsite))
-        !33
-         pair_full(k+DNsite,q+DNsite)=pair_full(k+DNsite,q+DNsite)- &
-     & 0.25d0*((onebody(k,q)*onebody(mk+Nsite,mq+Nsite)-onebody(k,mq+Nsite)*onebody(mk+Nsite,q)) &  
-     &        +(onebody(k+Nsite,q+Nsite)*onebody(mk,mq)-onebody(k+Nsite,mq)*onebody(mk,q+Nsite)) &
-     &        -(onebody(k,q+Nsite)*onebody(mk+Nsite,mq)-onebody(k,mq)*onebody(mk+Nsite,q+Nsite)) &
-     &        -(onebody(k+Nsite,q)*onebody(mk,mq+Nsite)-onebody(k+Nsite,mq+Nsite)*onebody(mk,q)))
-      end if
+         if(q.GE.k) then
+            !11
+            pair_full(k,q)=pair_full(k,q)-(onebody(k,q)*onebody(mk,mq)-onebody(k,mq)*onebody(mk,q))
+            !22
+            pair_full(k+Nsite,q+Nsite)=pair_full(k+Nsite,q+Nsite)- &
+                 & (onebody(k+Nsite,q+Nsite)*onebody(mk+Nsite,mq+Nsite)-onebody(k+Nsite,mq+Nsite)*onebody(mk+Nsite,q+Nsite))
+            !33
+            pair_full(k+DNsite,q+DNsite)=pair_full(k+DNsite,q+DNsite)- &
+                 & 0.25d0*((onebody(k,q)*onebody(mk+Nsite,mq+Nsite)-onebody(k,mq+Nsite)*onebody(mk+Nsite,q)) &  
+                 &        +(onebody(k+Nsite,q+Nsite)*onebody(mk,mq)-onebody(k+Nsite,mq)*onebody(mk,q+Nsite)) &
+                 &        -(onebody(k,q+Nsite)*onebody(mk+Nsite,mq)-onebody(k,mq)*onebody(mk+Nsite,q+Nsite)) &
+                 &        -(onebody(k+Nsite,q)*onebody(mk,mq+Nsite)-onebody(k+Nsite,mq+Nsite)*onebody(mk,q)))
+         end if
          !12
          pair_full(k,q+Nsite)=pair_full(k,q+Nsite)-(onebody(k,q+Nsite)*onebody(mk,mq+Nsite)- &
-                        &  onebody(k,mq+Nsite)*onebody(mk,q+Nsite))
+              &  onebody(k,mq+Nsite)*onebody(mk,q+Nsite))
          !13
          pair_full(k,q+DNsite)=pair_full(k,q+DNsite)-(0.5d0*(onebody(k,q)*onebody(mk,mq+Nsite)- &
-       & onebody(k,mq+Nsite)*onebody(mk,q))-0.5d0*(onebody(k,q+Nsite)*onebody(mk,mq)- &
-       & onebody(k,mq)*onebody(mk,q+Nsite)))
+              & onebody(k,mq+Nsite)*onebody(mk,q))-0.5d0*(onebody(k,q+Nsite)*onebody(mk,mq)- &
+              & onebody(k,mq)*onebody(mk,q+Nsite)))
          !23
          pair_full(k+Nsite,q+DNsite)=pair_full(k+Nsite,q+DNsite)-(0.5d0*(onebody(k+Nsite,q)*onebody(mk+Nsite,mq+Nsite)- &
-       & onebody(k+Nsite,mq+Nsite)*onebody(mk+Nsite,q))-0.5d0*(onebody(k+Nsite,q+Nsite)*onebody(mk+Nsite,mq)- &
-       & onebody(k+Nsite,mq)*onebody(mk+Nsite,q+Nsite))) 
+              & onebody(k+Nsite,mq+Nsite)*onebody(mk+Nsite,q))-0.5d0*(onebody(k+Nsite,q+Nsite)*onebody(mk+Nsite,mq)- &
+              & onebody(k+Nsite,mq)*onebody(mk+Nsite,q+Nsite))) 
 
+      end do
    end do
-end do
+else if(dtype.eq.'w') then
+   do k=1,Nsite,1
+      call inverse_momentum(k,mk)
+      do q=k,Nsite,1
+         call inverse_momentum(q,mq)
+
+         pair_full(k,q)=pair_full(k,q)-0.5* &
+              (onebody(k,q)*onebody(mk+Nsite,mq+Nsite)-onebody(k,mq)*onebody(mk+Nsite,q+Nsite) &
+              & -onebody(k+Nsite,mq+Nsite)*onebody(mk,q)+onebody(k+Nsite,q+Nsite)*onebody(mk,mq))
+
+      end do
+   end do
+end if
+         
 end subroutine minus_pairing_bg
 
 
