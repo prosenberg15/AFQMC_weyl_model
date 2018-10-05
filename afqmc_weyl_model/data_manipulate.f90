@@ -11,7 +11,7 @@ complex(kind=8)::mean_c,mean_cup,mean_cdn
 real(kind=8)::mean,error,errorup,errordn
 real(kind=8)::kx,ky
 real(kind=8)::m_n,m_n_e,m_np,m_np_e,m_nm,m_nm_e,m_sx,m_sx_e,m_sy,m_sy_e
-integer::i,j
+integer::i,j,pt
 
 call get_filename()
 
@@ -177,7 +177,7 @@ end do
     end if
     
     if(rank.eq.0) close(16)
-
+    
     if((openbcx.eq.0).and.(openbcy.eq.0)) then
     !write pairing stucture factor
        if(rank.eq.0) call openUnit(dkName,16,'R')
@@ -213,6 +213,32 @@ end do
     if(rank.eq.0) close(16)
 
  end if
+
+
+    !write pairing correlation dpidpj
+ if(dtype.eq.'w') then
+    if(rank.eq.0) call openUnit(dpidpjName,16,'R')
+    
+    Ns=Nsite
+    do pt=1,3,1
+       do i=1,Ns,1
+          if((openbcx.eq.0).and.(openbcy.eq.0)) then
+             dpidpj_one(i,pt)=dpidpj_one(i,pt)/dble(i_observ*Nsite)
+          end if
+#ifdef MPI
+          call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+          call MPI_GATHER(dpidpj_one(i,pt),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+          call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+          mean_c=dpidpj_one(i,pt)
+          error=0.d0
+#endif
+          if(rank.eq.0) write(16,'(1I4,3E26.16)') i,pt,dble(mean_c),dimag(mean_c),error
+       end do
+    end do
+    if(rank.eq.0) close(16)
+    
+ endif
     
     !write spin spin correlation
     if(rank.eq.0) call openUnit(ScorrName,16,'R')

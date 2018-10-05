@@ -34,6 +34,7 @@ integer,allocatable::sit(:,:)        !of hoping term in different sites
 integer,allocatable::coor(:,:) ! we label the site, it record the coordinate
 integer,allocatable::coor_true_site(:,:)
 integer,allocatable::sublattice_site_to_true_site(:)
+integer,allocatable::site_to_sublattice(:)
 integer,allocatable::Tmatrix(:,:) !Use to store the nearest hopping in different direction.
 complex(kind=8),allocatable::Hzero(:,:)    !2*Nsite,2*Nsite,the Hezo Hamiltonian of the lattice
 integer,allocatable::par_bonds(:,:), perp_bonds(:,:)
@@ -103,7 +104,8 @@ if(rank.eq.0) write(*,*) 'Nsites: ', Nsite
        do i=1,Nsite,1
           write(*,*) i, sublattice_site_to_true_site(i), &
                & coor_true_site(sublattice_site_to_true_site(i),1), &
-               & coor_true_site(sublattice_site_to_true_site(i),2)
+               & coor_true_site(sublattice_site_to_true_site(i),2), &
+               & site_to_sublattice(i)
        end do
     end if
  end if
@@ -233,6 +235,13 @@ elseif(dtype.eq.'w') then
    do i=1,Nbravais
       sublattice_site_to_true_site(i)=2*i-1
       sublattice_site_to_true_site(i+Nbravais)=2*i
+   end do
+
+   do i=1,Nbravais
+      site_to_sublattice(sublattice_site_to_true_site(i))= &
+           & int(0.5*(sublattice_site_to_true_site(i)+1))
+      site_to_sublattice(sublattice_site_to_true_site(i+Nbravais))= &
+           & int(0.5*(sublattice_site_to_true_site(i+Nbravais))+Nbravais)
    end do
       
    do i=1,Nsite,1
@@ -1356,7 +1365,7 @@ do l=1,bpr,2
    count = count + 1
    
    do j=1,Nl(2)-1,1
-      if(rank.eq.0) write(*,*) l+j*bpr
+      !if(rank.eq.0) write(*,*) l+j*bpr
       par_bonds(1,l+j*bpr) = par_bonds(1,l) + j*Nl(1)
       par_bonds(2,l+j*bpr) = par_bonds(2,l) + j*Nl(1)
    end do
@@ -1374,7 +1383,7 @@ do l = 2, bpr, 2
    count = count + 1
    
    do j=1,Nl(2)-1,1
-      if(rank.eq.0) write(*,*) l+j*bpr
+      !if(rank.eq.0) write(*,*) l+j*bpr
       par_bonds(1,l+j*bpr) = par_bonds(1,l) + j*Nl(1)
       par_bonds(2,l+j*bpr) = par_bonds(2,l) + j*Nl(1)
    end do
@@ -1484,6 +1493,7 @@ allocate(coor(Nsite,Dimen))
 if(dtype.eq.'w') then
    allocate(coor_true_site(Nsite,Dimen))
    allocate(sublattice_site_to_true_site(Nsite))
+   allocate(site_to_sublattice(Nsite))
    allocate(par_bonds(2,Nbonds_par))
 end if
 !if(dtype.eq.'w') allocate(perp_bonds(2,Nbonds_perp))
@@ -1504,6 +1514,7 @@ if(allocated(sit)) deallocate(sit)
 if(allocated(coor)) deallocate(coor)
 if(allocated(coor_true_site)) deallocate(coor_true_site)
 if(allocated(sublattice_site_to_true_site)) deallocate(sublattice_site_to_true_site)
+if(allocated(site_to_sublattice)) deallocate(site_to_sublattice)
 if(allocated(par_bonds)) deallocate(par_bonds)
 !if(allocated(perp_bonds)) deallocate(perp_bonds)
 if(allocated(Hzero)) deallocate(Hzero)

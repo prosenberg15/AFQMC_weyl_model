@@ -1,6 +1,6 @@
  Start to run the routine.
- date=20180916
- time=          11 :          45 :           7
+ date=20181005
+ time=          16 :          44 :          28
  --------------------------------------------------------
   
   
@@ -13,8 +13,10 @@
  pfft and diagm must be 1
  pfft and diagm must be 1
  pfft and diagm must be 1
+ pfft and diagm must be 1
+ pfft and diagm must be 1
 --------------------------------------------------------------------------
-mpirun has exited due to process rank 2 with PID 8852 on
+mpirun has exited due to process rank 0 with PID 977 on
 node prosenberg-7050 exiting improperly. There are three reasons this could occur:
 
 1. this process did not call "init" before exiting, but others in

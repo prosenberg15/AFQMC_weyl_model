@@ -264,6 +264,15 @@ end if
     !singlet pairing
     call add_didj(Amat_local)
 
+    if(dtype.eq.'w') then
+       !extended s-wave pairing
+       call add_dpidpj(1,Amat_local)
+       !p-wave pairing
+       call add_dpidpj(2,Amat_local)
+       !d-wave pairing
+       call add_dpidpj(3,Amat_local)
+    end if
+    
     !spin spin correlation
     call add_sisj(Amat_local)
 
@@ -443,6 +452,124 @@ else if ((openbcx.eq.1).and.(openbcy.eq.1)) then
 end subroutine add_didj
 
 
+subroutine add_dpidpj(ptype,Amat_local)
+use all_param
+implicit none
+integer,intent(IN)::ptype
+complex(kind=8),intent(IN)::Amat_local(DNsite,DNsite)
+complex(kind=8)::dpidpj_local
+integer,external::latt_label
+integer,external::latt_label_true_site
+integer,external::bound
+integer::cc(1:Dimen),ctmp
+integer::i,j,sitei,sitej,n,m
+integer::ip,jp,jp_true_site
+integer::delta,delta_p, dir(4,2)
+complex(kind=8)::pform(4)
+
+if(ptype.eq.1) then
+   !extended s-wave pairing
+   !p_x
+   pform(1)=one
+   !p_-x
+   pform(2)=one
+   !p_y
+   pform(3)=one
+   !p_-y
+   pform(3)=one
+else if(ptype.eq.2) then
+   !p-wave pairing
+   !p_x
+   pform(1)=one
+   !p_-x
+   pform(2)=-1.d0*one
+   !p_y
+   pform(3)=Xi
+   !p_-y
+   pform(3)=-1.d0*Xi
+else if(ptype.eq.3) then
+   !-dwave pairing
+   !p_x
+   pform(1)=one
+   !p_-x
+   pform(2)=one
+   !p_y
+   pform(3)=-1.d0*one
+   !p_-y
+   pform(4)=-1.d0*one
+endif
+
+dir(1,1)=1
+dir(1,2)=0
+dir(2,1)=-1
+dir(2,2)=0
+dir(3,1)=0
+dir(3,2)=1
+dir(4,1)=0
+dir(4,2)=-1
+
+if(dtype.EQ.'w') then
+   do i=1,Nsite,1
+      do j=1,Nsite,1
+
+         dpidpj_local=zero
+         !in terms of sites
+         sitej=sublattice_site_to_true_site(j)
+         sitei=sublattice_site_to_true_site(i)
+         do m=1,Dimen,1
+            !We calculate didj==>d1d(j-i+1)
+            !so we need to focus on j-i+1
+            ctmp=coor_true_site(sitej,m)-coor_true_site(sitei,m)+1
+            if(m.eq.1) then
+               cc(m)=bound(ctmp,2*Nl(m))
+            else if(m.eq.2) then
+               cc(m)=bound(ctmp,Nl(m))
+            end if
+         end do
+         n=latt_label_true_site(cc(1:Dimen))
+         
+         do delta=1,4,1
+
+            cc(:)=coor_true_site(sitei,:)
+            ctmp=cc(1)+dir(delta,1)
+            cc(1)=bound(ctmp,2*Nl(1))
+            ctmp=cc(2)+dir(delta,2)
+            cc(2)=bound(ctmp,Nl(2))
+            ip=latt_label_true_site(cc(1:Dimen))
+            ip=site_to_sublattice(ip)
+            
+            do delta_p=1,4,1
+
+               cc(:)=coor_true_site(sitej,:)
+               !if(rank.eq.0) write(*,*) j, delta_p, cc(1), cc(2)
+               ctmp=cc(1)+dir(delta_p,1)
+               cc(1)=bound(ctmp,2*Nl(1))
+               ctmp=cc(2)+dir(delta_p,2)
+               cc(2)=bound(ctmp,Nl(2))
+               !if(rank.eq.0) write(*,*) cc(1), cc(2)
+               jp=latt_label_true_site(cc(1:Dimen))
+               jp_true_site=jp
+               jp=site_to_sublattice(jp)
+
+               !if(rank.eq.0) write(*,*) i, ip, j, jp, n
+               
+               dpidpj_local = dpidpj_local + 0.5*pform(delta)*conjg(pform(delta_p))*( &
+                    & Amat_local(i,j)*Amat_local(ip+Nsite,jp+Nsite) + &
+                    & Amat_local(ip,j)*Amat_local(i+Nsite,jp+Nsite) + &
+                    & Amat_local(ip+Nsite,j+Nsite)*Amat_local(i,jp) + &
+                    & Amat_local(i+Nsite,j+Nsite)*Amat_local(ip,jp))
+
+            end do
+         end do
+
+         call kahan_sum_c(dpidpj_local,dpidpj_c(n,ptype),dpidpj_one(n,ptype))
+            
+      end do
+   end do
+end if
+   
+end subroutine add_dpidpj
+   
 subroutine add_sisj(Amat_local)
 use all_param
 implicit none
@@ -1332,6 +1459,8 @@ else if(dtype.eq.'w') then
    allocate(dk_one(DNsite))
    allocate(didj_true_site_one(Nsite))
    allocate(didj_true_site_c(Nsite))
+   allocate(dpidpj_one(Nsite,3))
+   allocate(dpidpj_c(Nsite,3))
 endif
 allocate(sisj_one(Nsite))
 allocate(sisj_c(Nsite))
@@ -1375,6 +1504,8 @@ use all_param
 implicit none
 if(allocated(didj_one)) deallocate(didj_one)
 if(allocated(didj_c)) deallocate(didj_c)
+if(allocated(dpidpj_one)) deallocate(dpidpj_one)
+if(allocated(dpidpj_c)) deallocate(dpidpj_c)
 if(allocated(didj_true_site_one)) deallocate(didj_true_site_one)
 if(allocated(didj_true_site_c)) deallocate(didj_true_site_c)
 if(allocated(dk_one)) deallocate(dk_one)

@@ -61,6 +61,9 @@ call appendBaseName(cksName,'_cks.dat')
 call copyName(BaseName,didjName)
 call appendBaseName(didjName,'_didj.dat')
 
+call copyName(BaseName,dpidpjName)
+call appendBaseName(dpidpjName,'_dpidpj.dat')
+
 call copyName(BaseName,dkName)
 call appendBaseName(dkName,'_dk.dat')
 

@@ -28,6 +28,8 @@ if(thermstep.LE.Nlen/2) then
      ninj_true_site_c=zero
      didj_true_site_one=zero
      didj_true_site_c=zero
+     dpidpj_one=zero
+     dpidpj_c=zero
   end if
   didj_one=zero;didj_c=zero
   sisj_one=zero;sisj_c=zero
