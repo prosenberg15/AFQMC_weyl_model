@@ -233,7 +233,7 @@ end do
           mean_c=dpidpj_one(i,pt)
           error=0.d0
 #endif
-          if(rank.eq.0) write(16,'(1I4,3E26.16)') i,pt,dble(mean_c),dimag(mean_c),error
+          if(rank.eq.0) write(16,'(2I4,3E26.16)') i,pt,dble(mean_c),dimag(mean_c),error
        end do
     end do
     if(rank.eq.0) close(16)
