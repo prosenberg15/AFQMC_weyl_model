@@ -476,7 +476,7 @@ if(ptype.eq.1) then
    !p_y
    pform(3)=one
    !p_-y
-   pform(3)=one
+   pform(4)=one
 else if(ptype.eq.2) then
    !p-wave pairing
    !p_x
@@ -486,7 +486,7 @@ else if(ptype.eq.2) then
    !p_y
    pform(3)=Xi
    !p_-y
-   pform(3)=-1.d0*Xi
+   pform(4)=-1.d0*Xi
 else if(ptype.eq.3) then
    !-dwave pairing
    !p_x
