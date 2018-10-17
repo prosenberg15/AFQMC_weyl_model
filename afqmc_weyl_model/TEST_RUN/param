@@ -2,7 +2,7 @@
 9      !Nsite->set=1
 36       !Nhop->set=1
 2        !Nl(1)->set/=1 & Dimen>=1
-1        !Nl(2)->set/=1 & Dimen>=2
+4        !Nl(2)->set/=1 & Dimen>=2
 1        !Nl(3)->set/=1 & Dimen=3
 0.d0    !kbound(1)->set=3 & Dimen>=1
 0.d0    !kbound(2)->set=3 & Dimen>=2
@@ -16,10 +16,10 @@
 (-0.6d0,0.d0)  !td hopping in diagonal direction
 0.0      !lamda spin orbit coupling strength
 -1.0     !onsitU Hubbard U interaction on the same site.
-4       !Ntot the up spin and down spin particle numbers
-w      !dtype for the determinant type: d decoupled, c coupled, w weyl model
-2     !Nspin(1) means Nup
-2     !Nspin(2) means Ndn
+16       !Ntot the up spin and down spin particle numbers
+d      !dtype for the determinant type: d decoupled, c coupled, w weyl model
+4     !Nspin(1) means Nup
+4     !Nspin(2) means Ndn
 0.025d0         !dt each slice of imagine time
 1       !kcrn 1.d s;2.d c for different kinds of release method
 1      !bgset 0. mean field 1. dynamic background walker
@@ -29,7 +29,7 @@ w      !dtype for the determinant type: d decoupled, c coupled, w weyl model
 10      !Nmeas number of measurement
 10   !StepforGram number of steps when we do modified GS
 0         !PP:0 phi and aux from code, 1 aux from code read phi, 2 read aux and phi
-5000       !Nlen for the length of the beta
+1000       !Nlen for the length of the beta
 50        !blk the size of the block
 25    !meastep how often to measure.
-1001  !thermstep therm for non-commute observables.
+100  !thermstep therm for non-commute observables.

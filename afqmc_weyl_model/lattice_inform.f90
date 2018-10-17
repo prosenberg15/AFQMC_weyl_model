@@ -1464,18 +1464,18 @@ integer,external::latt_label_true_site
 integer,external::bound
 integer::coord(1:Dimen)
 integer::i
-if(dtype.ne.'w') then
+!if(dtype.ne.'w') then
    do i=1,Dimen,1
       coord(i)=bound(2-coor(k,i),Nl(i))
    end do
    q=latt_label(coord)
-else if(dtype.eq.'w') then
-   do i=1,Dimen,1
-      if(i.eq.1) coord(i)=bound(2-coor_true_site(k,i),2*Nl(i))
-      if(i.eq.2) coord(i)=bound(2-coor_true_site(k,i),Nl(i))
-   end do
-   q=latt_label_true_site(coord)
-end if
+!else if(dtype.eq.'w') then
+!   do i=1,Dimen,1
+!      if(i.eq.1) coord(i)=bound(2-coor_true_site(k,i),2*Nl(i))
+!      if(i.eq.2) coord(i)=bound(2-coor_true_site(k,i),Nl(i))
+!   end do
+!   q=latt_label_true_site(coord)
+!end if
 
 end subroutine inverse_momentum
 

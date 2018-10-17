@@ -220,7 +220,7 @@ end do
     if(rank.eq.0) call openUnit(dpidpjName,16,'R')
     
     Ns=Nsite
-    do pt=1,3,1
+    do pt=1,5,1
        do i=1,Ns,1
           if((openbcx.eq.0).and.(openbcy.eq.0)) then
              dpidpj_one(i,pt)=dpidpj_one(i,pt)/dble(i_observ*Nsite)

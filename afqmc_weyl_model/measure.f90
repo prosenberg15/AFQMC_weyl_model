@@ -4,7 +4,6 @@ implicit none
 #ifdef MPI
 include "mpif.h"
 #endif
-
 complex(kind=8),intent(IN)::phL_r(DNsite,Ntot),phR_r(DNsite,Ntot)
 complex(kind=8)::phL_k(DNsite,Ntot),phR_k(DNsite,Ntot)
 complex(kind=8)::Amat_local_dr(DNsite),Amat_local_dk(DNsite),Amat_local_ofdr(DNsite)
@@ -267,10 +266,14 @@ end if
     if(dtype.eq.'w') then
        !extended s-wave pairing
        call add_dpidpj(1,Amat_local)
-       !p-wave pairing
+       !px-wave pairing
        call add_dpidpj(2,Amat_local)
-       !d-wave pairing
+       !py-wave pairing
        call add_dpidpj(3,Amat_local)
+       !px+py-wave pairing
+       call add_dpidpj(4,Amat_local)
+       !d-wave pairing (x^2-y^2)
+       call add_dpidpj(5,Amat_local)
     end if
     
     !spin spin correlation
@@ -463,7 +466,7 @@ integer,external::latt_label_true_site
 integer,external::bound
 integer::cc(1:Dimen),ctmp
 integer::i,j,sitei,sitej,n,m
-integer::ip,jp,jp_true_site
+integer::ip,jp,jp_true_site,nns,n0
 integer::delta,delta_p, dir(4,2)
 complex(kind=8)::pform(4)
 
@@ -477,17 +480,26 @@ if(ptype.eq.1) then
    pform(3)=one
    !p_-y
    pform(4)=one
-else if(ptype.eq.2) then
+   n0=1
+   nns=4
+else if((ptype.eq.2).or.(ptype.eq.3).or.(ptype.eq.4)) then
    !p-wave pairing
    !p_x
    pform(1)=one
    !p_-x
    pform(2)=-1.d0*one
    !p_y
-   pform(3)=Xi
+   pform(3)=one
    !p_-y
-   pform(4)=-1.d0*Xi
-else if(ptype.eq.3) then
+   pform(4)=-1.d0*one
+   if(ptype.eq.2) then
+      n0=1
+      nns=2
+   else if(ptype.eq.3) then
+      n0=3
+      nns=4
+   end if
+else if(ptype.eq.5) then
    !-dwave pairing
    !p_x
    pform(1)=one
@@ -497,6 +509,8 @@ else if(ptype.eq.3) then
    pform(3)=-1.d0*one
    !p_-y
    pform(4)=-1.d0*one
+   n0=1
+   nns=4
 endif
 
 dir(1,1)=1
@@ -527,8 +541,8 @@ if(dtype.EQ.'w') then
             end if
          end do
          n=latt_label_true_site(cc(1:Dimen))
-         
-         do delta=1,4,1
+
+         do delta=n0,nns,1
 
             cc(:)=coor_true_site(sitei,:)
             ctmp=cc(1)+dir(delta,1)
@@ -538,7 +552,7 @@ if(dtype.EQ.'w') then
             ip=latt_label_true_site(cc(1:Dimen))
             ip=site_to_sublattice(ip)
             
-            do delta_p=1,4,1
+            do delta_p=n0,nns,1
 
                cc(:)=coor_true_site(sitej,:)
                !if(rank.eq.0) write(*,*) j, delta_p, cc(1), cc(2)
@@ -1370,6 +1384,7 @@ if(dtype.ne.'w') then
    !build up the full matrix, only build half of the matrix
    do k=1,Nsite,1
       call inverse_momentum(k,mk)
+      if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
       do q=1,Nsite,1
          call inverse_momentum(q,mq)
 
@@ -1414,15 +1429,26 @@ if(dtype.ne.'w') then
    end do
 else if(dtype.eq.'w') then
    !build up the full matrix, only build half of the matrix
-   do k=1,Nsite,1
+   do k=1,Nbravais,1
       call inverse_momentum(k,mk)
-      do q=k,Nsite,1
+      if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
+      do q=k,Nbravais,1
          call inverse_momentum(q,mq)
 
          pair_full(k,q)=pair_full(k,q)+0.5* &
               (Amat_local(k,q)*Amat_local(mk+Nsite,mq+Nsite)-Amat_local(k,mq)*Amat_local(mk+Nsite,q+Nsite) &
             & -Amat_local(k+Nsite,mq+Nsite)*Amat_local(mk,q)+Amat_local(k+Nsite,q+Nsite)*Amat_local(mk,mq))
 
+         pair_full(k,q+Nbravais)=pair_full(k,q+Nbravais)+0.5* &
+              (Amat_local(k,q+Nbravais)*Amat_local(mk+Nsite,mq+Nbravais+Nsite)-Amat_local(k,mq+Nbravais)*Amat_local(mk+Nsite,q+Nbravais+Nsite) &
+              & -Amat_local(k+Nsite,mq+Nbravais+Nsite)*Amat_local(mk,q+Nbravais)+Amat_local(k+Nsite,q+Nbravais+Nsite)*Amat_local(mk,mq+Nbravais))
+
+         pair_full(k+Nbravais,q+Nbravais)=pair_full(k+Nbravais,q+Nbravais)+0.5* &
+              (Amat_local(k+Nbravais,q+Nbravais)*Amat_local(mk+Nbravais+Nsite,mq+Nbravais+Nsite)- &
+              & Amat_local(k+Nbravais,mq+Nbravais)*Amat_local(mk+Nsite,q+Nsite) &
+              & -Amat_local(k+Nbravais+Nsite,mq+Nbravais+Nsite)*Amat_local(mk+Nbravais,q+Nbravais)+ &
+              & Amat_local(k+Nbravais+Nsite,q+Nbravais+Nsite)*Amat_local(mk+Nbravais,mq+Nbravais))
+         
          !MUST COMPLETE PORTION BELOW HERE
          !12 (AB)
          !pair_full(k,q+Nbravais)=pair_full(k,q+Nbravais)+0.5* &
@@ -1459,8 +1485,8 @@ else if(dtype.eq.'w') then
    allocate(dk_one(DNsite))
    allocate(didj_true_site_one(Nsite))
    allocate(didj_true_site_c(Nsite))
-   allocate(dpidpj_one(Nsite,3))
-   allocate(dpidpj_c(Nsite,3))
+   allocate(dpidpj_one(Nsite,5))
+   allocate(dpidpj_c(Nsite,5))
 endif
 allocate(sisj_one(Nsite))
 allocate(sisj_c(Nsite))
