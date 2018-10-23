@@ -1384,7 +1384,7 @@ if(dtype.ne.'w') then
    !build up the full matrix, only build half of the matrix
    do k=1,Nsite,1
       call inverse_momentum(k,mk)
-      if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
+      !if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
       do q=1,Nsite,1
          call inverse_momentum(q,mq)
 
@@ -1431,7 +1431,7 @@ else if(dtype.eq.'w') then
    !build up the full matrix, only build half of the matrix
    do k=1,Nbravais,1
       call inverse_momentum(k,mk)
-      if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
+      !if(rank.eq.0) write(*,*) 'inverse momentum', k, mk
       do q=k,Nbravais,1
          call inverse_momentum(q,mq)
 

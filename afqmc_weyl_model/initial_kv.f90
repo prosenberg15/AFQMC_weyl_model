@@ -370,22 +370,35 @@ do i=1,Ns,1
    elseif(dtype.eq.'w') then
       eig=2.d0*dble(tyhop)*cos(ky)
 
-      hkx=-1.d0*(dble(vhop)+2.d0*dble(tdhop)*cos(ky)) &
-           & -1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*cos(kx)
-      hky=-1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*sin(kx)
+      !hkx=-1.d0*(dble(vhop)+2.d0*dble(tdhop)*cos(ky)) &
+      !     & -1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*cos(kx)
+      !hky=-1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*sin(kx)
+      hkx=(dble(vhop)+2.d0*dble(tdhop)*cos(ky)) + &
+           & (dble(whop)+2.d0*dble(tdhop)*cos(ky))*cos(kx)
+      hky=(dble(whop)+2.d0*dble(tdhop)*cos(ky))*sin(kx)
       esoc=sqrt(hkx**2+hky**2)
 
-      if(abs(kx).LT.lit.AND.abs(ky).LT.lit) then
+      !if((abs(tdhop).lt.lit).and.(abs(vhop-whop).lt.lit).and.(abs(vhop-tyhop).lt.lit)) then
+      !   eig=eig+2.d0*dble(tyhop)*cos(kx)
+      !   esoc=0.d0
+      !endif
+
+!      if(abs(kx).LT.lit.AND.abs(ky).LT.lit) then
+      if((abs(hkx).lt.1d-8).and.(abs(hky).lt.1d-8)) then
          uk(i)=-1.d0/sqrt(2.d0)
       else
          uk(i)=-1.d0*(hkx-Xi*hky)/(sqrt(2.d0*(hkx**2+hky**2)))
       end if
       vk(i)=1.d0/sqrt(2.d0)
 
-      if((abs(hkx).lt.1d-8).and.(abs(hky).lt.1d-8)) then
-         uk(i)=1/sqrt(2.d0)
-         vk(i)=1/sqrt(2.d0)
-      endif
+      !if((abs(hkx).lt.1d-8).and.(abs(hky).lt.1d-8)) then
+      !   uk(i)=-1.d0/sqrt(2.d0)
+      !   vk(i)=1/sqrt(2.d0)
+      !endif
+
+      !if(rank.eq.0) then 
+      !   write(*,*) i, kx, ky, uk(i), vk(i)
+      !endif
    endif
       
 
