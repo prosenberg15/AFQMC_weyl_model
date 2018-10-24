@@ -528,9 +528,13 @@ end if
 
 !Write the useful label
 if(rank.eq.0) then
-  open(unit=16,file='lattice-label.dat',status='replace')
-      do i=1,Nsite,1
+   open(unit=16,file='lattice-label.dat',status='replace')
+   do i=1,Nsite,1
+      if(dtype.ne.'w') then
          write(16,*) i,coor(i,1:Dimen)
+      else if(dtype.eq.'w') then
+         write(16,*) i, coor_true_site(i,1:Dimen)
+      end if
       end do
   close(16)
 

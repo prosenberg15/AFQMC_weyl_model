@@ -194,9 +194,9 @@ i_observ=i_observ+1
           Kinm_local=Kinm_local+2*(sin(ky)+Xi*sin(kx))*lamda*Amat_local_k(mi,mi+Nsite)
           Kinm_local=Kinm_local+2*(sin(ky)-Xi*sin(kx))*lamda*Amat_local_k(mi+Nsite,mi)
        else if(dtype.eq.'w') then
-          hkx=-1.d0*(dble(vhop)+2.d0*dble(tdhop)*cos(ky)) &
-           & -1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*cos(kx)
-          hky=-1.d0*(dble(whop)+2.d0*dble(tdhop)*cos(ky))*sin(kx)
+          hkx=(dble(vhop)+2.d0*dble(tdhop)*cos(ky)) + &
+           & (dble(whop)+2.d0*dble(tdhop)*cos(ky))*cos(kx)
+          hky=(dble(whop)+2.d0*dble(tdhop)*cos(ky))*sin(kx)
           Kinm_local=Kinm_local+2.d0*dble(tyhop)*cos(ky)*(Amat_local_k(mi,mi)+Amat_local_k(mi+Nsite,mi+Nsite) &
                & + Amat_local_k(mi+Nbravais,mi+Nbravais)+Amat_local_k(mi+Nbravais+Nsite,mi+Nbravais+Nsite))
           Kinm_local=Kinm_local+(hkx-Xi*hky)*(Amat_local_k(mi,mi+Nbravais)+Amat_local_k(mi+Nsite,mi+Nbravais+Nsite))
