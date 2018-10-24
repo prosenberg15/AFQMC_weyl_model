@@ -30,6 +30,10 @@ if(thermstep.LE.Nlen/2) then
      didj_true_site_c=zero
      dpidpj_one=zero
      dpidpj_c=zero
+     ckup_one=zero;ckup_c=zero
+     ckdn_one=zero;ckdn_c=zero
+     cdag_A_cB_one=zero;cdag_A_cB_c=zero
+     cdag_B_cA_one=zero;cdag_B_cA_c=zero
   end if
   didj_one=zero;didj_c=zero
   sisj_one=zero;sisj_c=zero

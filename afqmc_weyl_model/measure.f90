@@ -1345,6 +1345,15 @@ do n=1,Nsite,1
    ck_local=Amat_local(n,n)+Amat_local(n+Nsite,n+Nsite)
    call kahan_sum_c(ck_local,ck_c(n),ck_one(n))
 end do
+if(dtype.eq.'w') then
+   do n=1,Nsite,1
+      !n_sigma(k)
+      ck_local=Amat_local(n,n)
+      call kahan_sum_c(ck_local,ckup_c(n),ckup_one(n))
+      ck_local=Amat_local(n+Nsite,n+Nsite)
+      call kahan_sum_c(ck_local,ckdn_c(n),ckdn_one(n))
+   end do
+end if
 end subroutine add_ck
 
 
@@ -1364,6 +1373,16 @@ do n=1,Nsite,1
    sk_local=(Amat_local(n,n+Nsite)-Amat_local(n+Nsite,n))/(2.d0*Xi)
    call kahan_sum_c(sk_local,sky_c(n),sky_one(n))
 end do
+if(dtype.eq.'w') then
+   do n=1,Nbravais,1
+      !c^dagger_{A(k),up}c_{B(k),up}
+      sk_local=Amat_local(n,n+Nbravais)
+      call kahan_sum_c(sk_local,cdag_A_cB_c(n),cdag_A_cB_one(n))
+      !c^dagger_{A(k),up}c_{B(k),up}
+      sk_local=Amat_local(n+Nbravais,n)
+      call kahan_sum_c(sk_local,cdag_B_cA_c(n),cdag_B_cA_one(n))
+   end do
+end if
 end subroutine add_sk
 
 
@@ -1501,6 +1520,14 @@ else if(dtype.eq.'w') then
    allocate(ninj_true_site_c(DNsite))
    allocate(d_one(Nbonds_par))
    allocate(d_c(Nbonds_par))
+   allocate(ckup_one(Nsite))
+   allocate(ckup_c(Nsite))
+   allocate(ckdn_one(Nsite))
+   allocate(ckdn_c(Nsite))
+   allocate(cdag_A_cB_one(Nbravais))
+   allocate(cdag_A_cB_c(Nbravais))
+   allocate(cdag_B_cA_one(Nbravais))
+   allocate(cdag_B_cA_c(Nbravais))
 end if
 allocate(edgecup_one(Nsite,Nsite))
 allocate(edgecup_c(Nsite,Nsite))
@@ -1559,6 +1586,14 @@ if(allocated(sky_one)) deallocate(sky_one)
 if(allocated(sky_c)) deallocate(sky_c)
 if(allocated(ck_one)) deallocate(ck_one)
 if(allocated(ck_c)) deallocate(ck_c)
+if(allocated(ckup_one)) deallocate(ckup_one)
+if(allocated(ckup_c)) deallocate(ckup_c)
+if(allocated(ckdn_one)) deallocate(ckdn_one)
+if(allocated(ckdn_c)) deallocate(ckdn_c)
+if(allocated(cdag_A_cB_one)) deallocate(cdag_A_cB_one)
+if(allocated(cdag_A_cB_c)) deallocate(cdag_A_cB_c)
+if(allocated(cdag_B_cA_one)) deallocate(cdag_B_cA_one)
+if(allocated(cdag_B_cA_c)) deallocate(cdag_B_cA_c)
 if(allocated(pair_full)) deallocate(pair_full)
 if(allocated(onebody)) deallocate(onebody)
 end subroutine deallocate_one_meas

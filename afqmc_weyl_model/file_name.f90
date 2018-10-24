@@ -58,6 +58,9 @@ call appendBaseName(SkName,'_sk.dat')
 call copyName(BaseName,cksName)
 call appendBaseName(cksName,'_cks.dat')
 
+call copyName(BaseName,cksWeylName)
+call appendBaseName(cksName,'_cks_Weyl.dat')
+
 call copyName(BaseName,didjName)
 call appendBaseName(didjName,'_didj.dat')
 

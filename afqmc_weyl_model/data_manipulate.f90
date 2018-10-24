@@ -7,10 +7,11 @@ include "mpif.h"
 integer(kind=8)::num_tmp,Ns
 complex(kind=8)::temp_array(Nsize)
 real(kind=8)::rtemp_array(Nsize)
-complex(kind=8)::mean_c,mean_cup,mean_cdn
+complex(kind=8)::mean_c,mean_cup,mean_cdn,m_sx_cmplx,m_sy_cmplx
 real(kind=8)::mean,error,errorup,errordn
 real(kind=8)::kx,ky
 real(kind=8)::m_n,m_n_e,m_np,m_np_e,m_nm,m_nm_e,m_sx,m_sx_e,m_sy,m_sy_e
+real(kind=8)::m_nup,m_nup_e,m_ndn,m_ndn_e
 integer::i,j,pt
 
 call get_filename()
@@ -381,6 +382,7 @@ end do
     
     !write momentum distribution
     if(rank.eq.0) call openUnit(cksName,16,'R')
+
     do i=1,Nsite,1
        ck_one(i)=ck_one(i)/dble(i_observ)
 #ifdef MPI
@@ -425,7 +427,70 @@ end do
     end do
     if(rank.eq.0) close(16)
 
-    !write bond bond correlation
+    !write momentum distribution Weyl model
+    if(dtype.eq.'w') then
+    if(rank.eq.0) call openUnit(cksWeylName,16,'R')
+    
+    do i=1,Nsite,1
+       ckup_one(i)=ckup_one(i)/dble(i_observ)
+       ckdn_one(i)=ckdn_one(i)/dble(i_observ)
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(ckup_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_c,errorup)
+#else
+       mean_cup=ckup_one(i)
+       errorup=0.d0
+#endif
+       
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(ckdn_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_c,errordn)
+#else
+       mean_cdn=ckdn_one(i)
+       errordn=0.d0
+#endif
+       m_nup=dble(mean_cup);m_nup_e=errorup
+       m_ndn=dble(mean_cdn);m_ndn_e=errordn
+
+       cdag_A_cB_one(i)=cdag_A_cB_one(i)/dble(i_observ)
+       cdag_B_cA_one(i)=cdag_B_cA_one(i)/dble(i_observ)
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(cdag_A_cB_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+       mean_c=cdag_A_cB_one(i)
+       error=0.d0
+#endif
+       m_sx=dble(mean_c);m_sx_e=error
+       m_sx_cmplx=mean_c
+
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(cdag_B_cA_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+       mean_c=cdag_B_cA_one(i)
+       error=0.d0
+#endif
+       m_sy=dble(mean_c);m_sy_e=error
+       m_sy_cmplx=mean_c
+
+       m_np=(m_nup+m_ndn)/2.d0+0.5*sqrt((m_nup-m_ndn)**2+4*m_sx_cmplx*conjg(m_sx_cmplx))
+       m_np_e=sqrt((m_nup_e**2+m_ndn_e**2)/2.d0+4*m_sx_e**2)
+
+       m_nm=(m_nup+m_ndn)/2.d0-0.5*sqrt((m_nup-m_ndn)**2+4*m_sx_cmplx*conjg(m_sx_cmplx))
+       m_nm_e=sqrt((m_nup_e**2+m_ndn_e**2)/2.d0+4*m_sx_e**2)
+       
+       if(rank.eq.0) write(16,'(1I4,12E26.16)') i,m_nup,m_nup_e,m_ndn,m_ndn_e, &
+       & m_np,m_np_e,m_nm,m_nm_e,m_sx,m_sx_e,m_sy,m_sy_e
+    end do
+    if(rank.eq.0) close(16)
+ end if
+
+ !write bond bond correlation
     if(dtype.eq.'w') then
        if(rank.eq.0) call openUnit(bondName,16,'R')
        

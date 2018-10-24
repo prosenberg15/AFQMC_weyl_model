@@ -105,9 +105,11 @@ complex(kind=8),allocatable::nidn_one(:),nidn_c(:)
 complex(kind=8),allocatable::skx_one(:),skx_c(:)
 complex(kind=8),allocatable::sky_one(:),sky_c(:)
 complex(kind=8),allocatable::ck_one(:),ck_c(:)
+complex(kind=8),allocatable::ckup_one(:),ckup_c(:),ckdn_one(:),ckdn_c(:)
+complex(kind=8),allocatable::cdag_A_cB_one(:),cdag_A_cB_c(:),cdag_B_cA_one(:),cdag_B_cA_c(:)
 complex(kind=8),allocatable::pair_full(:,:),onebody(:,:)
 character(len=300)::basename,EnergyName,numName,scorrName,skName,cksName,didjName,dkName
-character(len=300)::ninjName,nnkName,pairmName,edgecName,niName,bondName,dpidpjName
+character(len=300)::ninjName,nnkName,pairmName,edgecName,niName,bondName,dpidpjName,cksWeylName
 integer(kind=8)::Nupdate,Naccept
 end module meas_param
 
