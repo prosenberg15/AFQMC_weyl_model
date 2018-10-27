@@ -1378,7 +1378,9 @@ if(dtype.eq.'w') then
       !c^dagger_{A(k),up}c_{B(k),up}
       sk_local=Amat_local(n,n+Nbravais)
       call kahan_sum_c(sk_local,cdag_A_cB_c(n),cdag_A_cB_one(n))
-      !c^dagger_{A(k),up}c_{B(k),up}
+      sk_local=Amat_local(n+Nsite,n+Nbravais+Nsite)
+      call kahan_sum_c(sk_local,cdag_A_cB_c(n+Nbravais),cdag_A_cB_one(n+Nbravais))
+      !c^dagger_{B(k),up}c_{A(k),up}
       sk_local=Amat_local(n+Nbravais,n)
       call kahan_sum_c(sk_local,cdag_B_cA_c(n),cdag_B_cA_one(n))
    end do
@@ -1520,14 +1522,14 @@ else if(dtype.eq.'w') then
    allocate(ninj_true_site_c(DNsite))
    allocate(d_one(Nbonds_par))
    allocate(d_c(Nbonds_par))
-   allocate(ckup_one(Nsite))
-   allocate(ckup_c(Nsite))
-   allocate(ckdn_one(Nsite))
-   allocate(ckdn_c(Nsite))
-   allocate(cdag_A_cB_one(Nbravais))
-   allocate(cdag_A_cB_c(Nbravais))
-   allocate(cdag_B_cA_one(Nbravais))
-   allocate(cdag_B_cA_c(Nbravais))
+   allocate(ckup_one(DNsite))
+   allocate(ckup_c(DNsite))
+   allocate(ckdn_one(DNsite))
+   allocate(ckdn_c(DNsite))
+   allocate(cdag_A_cB_one(2*Nbravais))
+   allocate(cdag_A_cB_c(2*Nbravais))
+   allocate(cdag_B_cA_one(2*Nbravais))
+   allocate(cdag_B_cA_c(2*Nbravais))
 end if
 allocate(edgecup_one(Nsite,Nsite))
 allocate(edgecup_c(Nsite,Nsite))

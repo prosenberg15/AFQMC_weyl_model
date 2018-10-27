@@ -8,10 +8,14 @@ integer(kind=8)::num_tmp,Ns
 complex(kind=8)::temp_array(Nsize)
 real(kind=8)::rtemp_array(Nsize)
 complex(kind=8)::mean_c,mean_cup,mean_cdn,m_sx_cmplx,m_sy_cmplx
+complex(kind=8)::m_sx_up_cmplx,m_sx_dn_cmplx
 real(kind=8)::mean,error,errorup,errordn
 real(kind=8)::kx,ky
 real(kind=8)::m_n,m_n_e,m_np,m_np_e,m_nm,m_nm_e,m_sx,m_sx_e,m_sy,m_sy_e
-real(kind=8)::m_nup,m_nup_e,m_ndn,m_ndn_e
+real(kind=8)::m_nup,m_nup_e,m_ndn,m_ndn_e,m_nAup,m_nAdn,m_nBup,m_nBdn
+real(kind=8)::m_nAup_e,m_nAdn_e,m_nBup_e,m_nBdn_e
+real(kind=8)::m_sx_up,m_sx_up_e,m_sx_dn,m_sx_dn_e
+real(kind=8)::m_np_up,m_np_dn,m_nm_up,m_nm_dn,m_np_up_e,m_np_dn_e,m_nm_up_e,m_nm_dn_e
 integer::i,j,pt
 
 call get_filename()
@@ -51,7 +55,7 @@ call get_filename()
 !print the observables
 if(thermstep.LE.Nlen/2) then
 
- !write edge current
+!write edge current
  if(rank.eq.0) call openUnit(edgecName,16,'R')
  do i=1,Nsite,1
     do j=1,Nsite,1
@@ -431,30 +435,52 @@ end do
     if(dtype.eq.'w') then
     if(rank.eq.0) call openUnit(cksWeylName,16,'R')
     
-    do i=1,Nsite,1
+    do i=1,Nbravais,1
        ckup_one(i)=ckup_one(i)/dble(i_observ)
+       ckup_one(i+Nbravais)=ckup_one(i+Nbravais)/dble(i_observ)
        ckdn_one(i)=ckdn_one(i)/dble(i_observ)
+       ckdn_one(i+Nbravais)=ckdn_one(i+Nbravais)/dble(i_observ)
 #ifdef MPI
        call MPI_BARRIER(MPI_COMM_WORLD,IERR)
        call MPI_GATHER(ckup_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
-       call err_anal_c(temp_array(1),Nsize,mean_c,errorup)
+       call err_anal_c(temp_array(1),Nsize,mean_cup,errorup)
 #else
        mean_cup=ckup_one(i)
        errorup=0.d0
 #endif
+       m_nAup=dble(mean_cup);m_nAup_e=errorup
+
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(ckup_one(i+Nbravais),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_cup,errorup)
+#else
+       mean_cup=ckup_one(i+Nbravais)
+       errorup=0.d0
+#endif
+       m_nBup=dble(mean_cup);m_nBup_e=errorup
        
 #ifdef MPI
        call MPI_BARRIER(MPI_COMM_WORLD,IERR)
        call MPI_GATHER(ckdn_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
-       call err_anal_c(temp_array(1),Nsize,mean_c,errordn)
+       call err_anal_c(temp_array(1),Nsize,mean_cdn,errordn)
 #else
        mean_cdn=ckdn_one(i)
        errordn=0.d0
 #endif
-       m_nup=dble(mean_cup);m_nup_e=errorup
-       m_ndn=dble(mean_cdn);m_ndn_e=errordn
+       m_nAdn=dble(mean_cdn);m_nAdn_e=errordn
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(ckdn_one(i+Nbravais),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_cdn,errordn)
+#else
+       mean_cdn=ckdn_one(i+Nbravais)
+       errordn=0.d0
+#endif
+       m_nBdn=dble(mean_cdn);m_nBdn_e=errordn
 
        cdag_A_cB_one(i)=cdag_A_cB_one(i)/dble(i_observ)
+       cdag_A_cB_one(i+Nbravais)=cdag_A_cB_one(i+Nbravais)/dble(i_observ)
        cdag_B_cA_one(i)=cdag_B_cA_one(i)/dble(i_observ)
 #ifdef MPI
        call MPI_BARRIER(MPI_COMM_WORLD,IERR)
@@ -464,9 +490,20 @@ end do
        mean_c=cdag_A_cB_one(i)
        error=0.d0
 #endif
-       m_sx=dble(mean_c);m_sx_e=error
-       m_sx_cmplx=mean_c
+       m_sx_up=dble(mean_c);m_sx_up_e=error
+       m_sx_up_cmplx=mean_c
 
+#ifdef MPI
+       call MPI_BARRIER(MPI_COMM_WORLD,IERR)
+       call MPI_GATHER(cdag_A_cB_one(i+Nbravais),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
+       call err_anal_c(temp_array(1),Nsize,mean_c,error)
+#else
+       mean_c=cdag_A_cB_one(i+Nbravais)
+       error=0.d0
+#endif
+       m_sx_dn=dble(mean_c);m_sx_dn_e=error
+       m_sx_dn_cmplx=mean_c
+       
 #ifdef MPI
        call MPI_BARRIER(MPI_COMM_WORLD,IERR)
        call MPI_GATHER(cdag_B_cA_one(i),1,MPI_DOUBLE_COMPLEX,temp_array(1),1,MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,IERR)
@@ -478,14 +515,21 @@ end do
        m_sy=dble(mean_c);m_sy_e=error
        m_sy_cmplx=mean_c
 
-       m_np=(m_nup+m_ndn)/2.d0+0.5*sqrt((m_nup-m_ndn)**2+4*m_sx_cmplx*conjg(m_sx_cmplx))
-       m_np_e=sqrt((m_nup_e**2+m_ndn_e**2)/2.d0+4*m_sx_e**2)
+       m_np_up=(m_nAup+m_nBup)/2.d0+0.5*sqrt((m_nAup-m_nBup)**2+4*m_sx_up_cmplx*conjg(m_sx_up_cmplx))
+       m_np_up_e=sqrt((m_nAup_e**2+m_nBup_e**2)/2.d0+4*m_sx_up_e**2)
 
-       m_nm=(m_nup+m_ndn)/2.d0-0.5*sqrt((m_nup-m_ndn)**2+4*m_sx_cmplx*conjg(m_sx_cmplx))
-       m_nm_e=sqrt((m_nup_e**2+m_ndn_e**2)/2.d0+4*m_sx_e**2)
+       m_nm_up=(m_nAup+m_nBup)/2.d0-0.5*sqrt((m_nAup-m_nBup)**2+4*m_sx_up_cmplx*conjg(m_sx_up_cmplx))
+       m_nm_up_e=sqrt((m_nAup_e**2+m_nBup_e**2)/2.d0+4*m_sx_up_e**2)
+
+       m_np_dn=(m_nAdn+m_nBdn)/2.d0+0.5*sqrt((m_nAdn-m_nBdn)**2+4*m_sx_dn_cmplx*conjg(m_sx_dn_cmplx))
+       m_np_dn_e=sqrt((m_nAdn_e**2+m_nBdn_e**2)/2.d0+4*m_sx_dn_e**2)
+
+       m_nm_dn=(m_nAdn+m_nBdn)/2.d0-0.5*sqrt((m_nAdn-m_nBdn)**2+4*m_sx_dn_cmplx*conjg(m_sx_dn_cmplx))
+       m_nm_dn_e=sqrt((m_nAdn_e**2+m_nBdn_e**2)/2.d0+4*m_sx_dn_e**2)
        
-       if(rank.eq.0) write(16,'(1I4,12E26.16)') i,m_nup,m_nup_e,m_ndn,m_ndn_e, &
-       & m_np,m_np_e,m_nm,m_nm_e,m_sx,m_sx_e,m_sy,m_sy_e
+       if(rank.eq.0) write(16,'(1I4,22E26.16)') i,m_nAup,m_nAup_e,m_nAdn,m_nAdn_e, &
+            & m_nBup,m_nBup_e,m_nBdn,m_nBdn_e,m_np_up,m_np_up_e,m_nm_up,m_nm_up_e, &
+            & m_np_dn,m_np_dn_e,m_nm_dn,m_nm_dn_e,m_sx_up,m_sx_up_e,m_sx_dn,m_sx_dn_e,m_sy,m_sy_e
     end do
     if(rank.eq.0) close(16)
  end if
